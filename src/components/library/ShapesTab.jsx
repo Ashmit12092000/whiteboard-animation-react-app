@@ -21,7 +21,13 @@ export default function ShapesTab() {
           onMouseEnter={e => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = '#334155'; e.currentTarget.style.transform = 'none'; }}
         >
-          <SvgRenderer svg={item.svg} style={{ width: 80, height: 80 }} />
+          <div style={{
+            width: 80, height: 80, borderRadius: 6,
+            background: '#f8fafc', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+          }}>
+            <SvgRenderer svg={item.svg} style={{ width: 72, height: 72 }} />
+          </div>
           <span style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center' }}>{item.name}</span>
           <button
             onClick={() => addDrawingGraphic(item)}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store';
 import { BOARD_TYPES } from '../../assets';
+import { CANVAS_SIZES } from '../../utils/animation';
 
 export default function NewProjectModal() {
   const createNewProject = useStore(s => s.createNewProject);
@@ -8,9 +9,10 @@ export default function NewProjectModal() {
 
   const [title, setTitle] = useState('Untitled Project');
   const [boardType, setBoardType] = useState('whiteboard');
+  const [canvasSizeKey, setCanvasSizeKey] = useState('16:9');
 
   const confirm = () => {
-    createNewProject(title.trim() || 'Untitled Project', boardType);
+    createNewProject(title.trim() || 'Untitled Project', boardType, canvasSizeKey);
   };
 
   return (
@@ -49,6 +51,53 @@ export default function NewProjectModal() {
                 {bt.label}
               </button>
             ))}
+          </div>
+        </Field>
+
+        <Field label="Canvas Ratio">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+            {CANVAS_SIZES.map(cs => {
+              const selected = canvasSizeKey === cs.key;
+              // Mini preview proportional to actual ratio
+              const previewW = 36;
+              const previewH = Math.round(previewW * cs.h / cs.w);
+              const clampedH = Math.min(previewH, 36);
+              const clampedW = clampedH === 36 ? Math.round(36 * cs.w / cs.h) : previewW;
+              return (
+                <button
+                  key={cs.key}
+                  onClick={() => setCanvasSizeKey(cs.key)}
+                  style={{
+                    padding: '10px 4px 8px',
+                    borderRadius: 8, cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                    background: selected ? 'rgba(59,130,246,0.15)' : '#1e293b',
+                    border: `2px solid ${selected ? '#3b82f6' : '#334155'}`,
+                    color: selected ? '#93c5fd' : '#94a3b8',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {/* Proportional preview box */}
+                  <div style={{
+                    width: clampedW, height: clampedH,
+                    border: `1.5px solid ${selected ? '#3b82f6' : '#475569'}`,
+                    borderRadius: 2,
+                    background: selected ? 'rgba(59,130,246,0.12)' : 'rgba(255,255,255,0.04)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 13, lineHeight: 1,
+                    flexShrink: 0,
+                  }}>
+                    {cs.icon}
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{cs.label}</span>
+                  <span style={{ fontSize: 9, opacity: 0.65, lineHeight: 1 }}>{cs.sublabel}</span>
+                </button>
+              );
+            })}
+          </div>
+          {/* Pixel size hint */}
+          <div style={{ marginTop: 6, fontSize: 10, color: '#475569', textAlign: 'center' }}>
+            {(() => { const s = CANVAS_SIZES.find(x => x.key === canvasSizeKey); return s ? `${s.w} × ${s.h} px` : ''; })()}
           </div>
         </Field>
 

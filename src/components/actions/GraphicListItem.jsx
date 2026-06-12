@@ -145,31 +145,33 @@ export default function GraphicListItem({ graphic, isSelected, onDragStart, onDr
 
           {graphic.type === 'text' && (
             <Row label="Color">
-              <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', rowGap: 6 }}>
                 <input
                   type="color"
                   value={graphic.color || '#1a1a1a'}
                   onChange={e => updateGraphicProps(graphic.id, { color: e.target.value })}
                   style={{
-                    width: 28, height: 24, padding: 1, cursor: 'pointer',
+                    width: 26, height: 22, padding: 1, cursor: 'pointer',
                     background: '#0f172a', border: '1px solid #334155',
                     borderRadius: 4, boxSizing: 'border-box', flexShrink: 0,
                   }}
                 />
-                <span style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'monospace' }}>
+                <span style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'monospace', flexShrink: 0 }}>
                   {graphic.color || '#1a1a1a'}
                 </span>
-                {['#1a1a1a','#ffffff','#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6'].map(c => (
-                  <div
-                    key={c}
-                    onClick={() => updateGraphicProps(graphic.id, { color: c })}
-                    style={{
-                      width: 14, height: 14, borderRadius: 2, flexShrink: 0,
-                      background: c, cursor: 'pointer',
-                      border: (graphic.color || '#1a1a1a') === c ? '2px solid #3b82f6' : '1px solid #475569',
-                    }}
-                  />
-                ))}
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                  {['#1a1a1a','#ffffff','#ef4444','#3b82f6','#10b981','#f59e0b','#8b5cf6'].map(c => (
+                    <div
+                      key={c}
+                      onClick={() => updateGraphicProps(graphic.id, { color: c })}
+                      style={{
+                        width: 14, height: 14, borderRadius: 2, flexShrink: 0,
+                        background: c, cursor: 'pointer',
+                        border: (graphic.color || '#1a1a1a') === c ? '2px solid #3b82f6' : '1px solid #475569',
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
             </Row>
           )}

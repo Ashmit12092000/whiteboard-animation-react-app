@@ -46,6 +46,30 @@ export function getBoardStyle(boardType) {
 }
 
 /**
+ * Supported canvas aspect ratios for new projects.
+ * `w`/`h` are the canvas's render resolution in px, used throughout
+ * the app (EditorCanvas, EditorView, CanvasGrid, thumbnails, export, etc).
+ */
+export const CANVAS_SIZES = [
+  { key: '16:9', label: '16:9', sublabel: 'Widescreen', icon: '🖥️', w: 800, h: 450 },
+  { key: '9:16', label: '9:16', sublabel: 'Vertical',   icon: '📱', w: 450, h: 800 },
+  { key: '1:1',  label: '1:1',  sublabel: 'Square',     icon: '◻️', w: 600, h: 600 },
+  { key: '4:3',  label: '4:3',  sublabel: 'Classic',    icon: '🖼️', w: 800, h: 600 },
+  { key: '3:4',  label: '3:4',  sublabel: 'Portrait',   icon: '📄', w: 600, h: 800 },
+];
+
+export const DEFAULT_CANVAS_SIZE_KEY = '16:9';
+
+/**
+ * Resolves a canvasSizeKey to its { w, h } dimensions.
+ * Falls back to the default (16:9, 800×450) if the key is missing/unknown.
+ */
+export function getCanvasSize(canvasSizeKey) {
+  const found = CANVAS_SIZES.find(cs => cs.key === canvasSizeKey);
+  return found ?? CANVAS_SIZES.find(cs => cs.key === DEFAULT_CANVAS_SIZE_KEY);
+}
+
+/**
  * Scale factor for rendering scene thumbnails in the timeline.
  * Canvas is 800x450; thumbnail is 128x72.
  */

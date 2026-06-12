@@ -1,14 +1,17 @@
+import { DEFAULT_CANVAS_SIZE_KEY } from '../utils/animation';
+
 // ─── ID helper ────────────────────────────────────────────────────────────────
 const uid = () => crypto.randomUUID();
 
 // ─── Project ──────────────────────────────────────────────────────────────────
-export function createProject(title = 'Untitled Project', boardType = 'whiteboard', handId = 'hand_pencil_svg') {
+export function createProject(title = 'Untitled Project', boardType = 'whiteboard', canvasSizeKey = DEFAULT_CANVAS_SIZE_KEY, handId = 'hand_pencil_svg') {
   const now = new Date().toISOString();
   const firstScene = createScene('1');
   return {
     id: uid(),
     title,
     boardType,
+    canvasSizeKey,
     handId,
     handConfig: { scale: 1, rotation: 0, flipX: false, offsetX: 0, offsetY: 0 },
     createdOn: now,

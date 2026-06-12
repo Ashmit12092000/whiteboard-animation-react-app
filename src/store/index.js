@@ -101,8 +101,8 @@ export const useStore = create((set, get) => ({
   },
 
   // ── Project CRUD ─────────────────────────────────────────────────────────────
-  createNewProject(title, boardType) {
-    const p = createProject(title, boardType);
+  createNewProject(title, boardType, canvasSizeKey) {
+    const p = createProject(title, boardType, canvasSizeKey);
     const updated = [p, ...get().recentProjects];
     persistProjects(updated);
     cameraEngine.set({ ...CAMERA_IDENTITY });

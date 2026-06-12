@@ -2,7 +2,7 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import { useStore } from '../../store';
 import GraphicItem from './GraphicItem';
 import WhiteboardHand from '../shared/WhiteboardHand';
-import { getBoardStyle } from '../../utils/animation';
+import { getBoardStyle, getCanvasSize } from '../../utils/animation';
 import CameraLayer from '../../camera/CameraLayer';
 import CameraControls from '../../camera/CameraControls';
 import CameraMiniMap from '../../camera/CameraMiniMap';
@@ -10,9 +10,6 @@ import CameraViewfinder from '../../camera/CameraViewfinder';
 import { useCameraPlayback, useWheelZoom } from '../../camera/cameraHooks';
 import { cameraEngine } from '../../camera/cameraEngine';
 import CanvasGrid from './CanvasGrid';
-
-const CANVAS_W = 800;
-const CANVAS_H = 450;
 
 function buildSequentialTimeline(graphics) {
   let cursor = 0;
@@ -28,6 +25,7 @@ export default function EditorCanvas({ playing = false }) {
   const selectedGraphicId  = useStore(s => s.selectedGraphicId);
   const selectGraphic      = useStore(s => s.selectGraphic);
   const project            = useStore(s => s.project);
+  const { w: CANVAS_W, h: CANVAS_H } = getCanvasSize(project?.canvasSizeKey);
   const selectedSceneId    = useStore(s => s.selectedSceneId);
   const getCameraKeyframes = useStore(s => s.getCameraKeyframes);
   const setCameraKeyframeFromCurrentView = useStore(s => s.setCameraKeyframeFromCurrentView);
@@ -168,6 +166,8 @@ export default function EditorCanvas({ playing = false }) {
           gridSize={gridSize}
           gridType={gridType}
           boardType={project?.boardType ?? 'whiteboard'}
+          canvasW={CANVAS_W}
+          canvasH={CANVAS_H}
         />
 
         {/*

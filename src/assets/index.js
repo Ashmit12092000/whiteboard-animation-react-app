@@ -32,21 +32,21 @@ export const SAMPLE_SHAPES = [
     id: 'shape_circle',
     name: 'Circle',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="50" r="44" fill="none" stroke="#f1f5f9" stroke-width="6"/>
+      <circle cx="50" cy="50" r="44" fill="none" stroke="#1a1a1a" stroke-width="6"/>
     </svg>`,
   },
   {
     id: 'shape_rect',
     name: 'Rectangle',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <rect x="8" y="18" width="84" height="64" rx="4" fill="none" stroke="#f1f5f9" stroke-width="6"/>
+      <rect x="8" y="18" width="84" height="64" rx="4" fill="none" stroke="#1a1a1a" stroke-width="6"/>
     </svg>`,
   },
   {
     id: 'shape_triangle',
     name: 'Triangle',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="50,8 94,92 6,92" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linejoin="round"/>
+      <polygon points="50,8 94,92 6,92" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linejoin="round"/>
     </svg>`,
   },
   {
@@ -54,30 +54,30 @@ export const SAMPLE_SHAPES = [
     name: 'Star',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <polygon points="50,6 61,35 92,35 68,57 77,88 50,70 23,88 32,57 8,35 39,35"
-        fill="none" stroke="#f1f5f9" stroke-width="5" stroke-linejoin="round"/>
+        fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
     </svg>`,
   },
   {
     id: 'shape_arrow_right',
     name: 'Arrow →',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <polyline points="10,50 78,50" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round"/>
-      <polyline points="58,28 82,50 58,72" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="10,50 78,50" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round"/>
+      <polyline points="58,28 82,50 58,72" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   {
     id: 'shape_arrow_up',
     name: 'Arrow ↑',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <polyline points="50,88 50,18" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round"/>
-      <polyline points="28,42 50,16 72,42" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="50,88 50,18" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round"/>
+      <polyline points="28,42 50,16 72,42" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   {
     id: 'shape_diamond',
     name: 'Diamond',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="50,6 94,50 50,94 6,50" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linejoin="round"/>
+      <polygon points="50,6 94,50 50,94 6,50" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linejoin="round"/>
     </svg>`,
   },
   {
@@ -100,7 +100,7 @@ export const SAMPLE_SHAPES = [
     name: 'Speech Bubble',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <path d="M10,12 Q10,6 16,6 H84 Q90,6 90,12 V58 Q90,64 84,64 H46 L28,88 L32,64 H16 Q10,64 10,58 Z"
-        fill="none" stroke="#f1f5f9" stroke-width="5" stroke-linejoin="round"/>
+        fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
     </svg>`,
   },
   {
@@ -129,42 +129,42 @@ export const SAMPLE_GRAPHICS = [
     id: 'gfx_person',
     name: 'Person',
     svg: `<svg viewBox="0 0 100 160" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="22" r="18" fill="none" stroke="#f1f5f9" stroke-width="5"/>
-      <line x1="50" y1="40" x2="50" y2="100" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
-      <line x1="50" y1="60" x2="20" y2="85" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
-      <line x1="50" y1="60" x2="80" y2="85" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
-      <line x1="50" y1="100" x2="26" y2="148" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
-      <line x1="50" y1="100" x2="74" y2="148" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="50" cy="22" r="18" fill="none" stroke="#1a1a1a" stroke-width="5"/>
+      <line x1="50" y1="40" x2="50" y2="100" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+      <line x1="50" y1="60" x2="20" y2="85" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+      <line x1="50" y1="60" x2="80" y2="85" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+      <line x1="50" y1="100" x2="26" y2="148" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+      <line x1="50" y1="100" x2="74" y2="148" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
     </svg>`,
   },
   {
     id: 'gfx_person_raising_hand',
     name: 'Raising Hand',
     svg: `<svg viewBox="0 0 100 160" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="50" cy="22" r="18" fill="none" stroke="#f1f5f9" stroke-width="5"/>
-      <line x1="50" y1="40" x2="50" y2="100" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
-      <line x1="50" y1="60" x2="16" y2="30" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
-      <line x1="50" y1="60" x2="80" y2="85" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
-      <line x1="50" y1="100" x2="26" y2="148" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
-      <line x1="50" y1="100" x2="74" y2="148" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="50" cy="22" r="18" fill="none" stroke="#1a1a1a" stroke-width="5"/>
+      <line x1="50" y1="40" x2="50" y2="100" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+      <line x1="50" y1="60" x2="16" y2="30" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+      <line x1="50" y1="60" x2="80" y2="85" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+      <line x1="50" y1="100" x2="26" y2="148" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+      <line x1="50" y1="100" x2="74" y2="148" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
     </svg>`,
   },
   {
     id: 'gfx_magnifier',
     name: 'Magnifier',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="42" cy="42" r="28" fill="none" stroke="#f1f5f9" stroke-width="7"/>
-      <line x1="62" y1="62" x2="88" y2="88" stroke="#f1f5f9" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="42" cy="42" r="28" fill="none" stroke="#1a1a1a" stroke-width="7"/>
+      <line x1="62" y1="62" x2="88" y2="88" stroke="#1a1a1a" stroke-width="8" stroke-linecap="round"/>
     </svg>`,
   },
   {
     id: 'gfx_laptop',
     name: 'Laptop',
     svg: `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">
-      <rect x="18" y="12" width="84" height="56" rx="4" fill="none" stroke="#f1f5f9" stroke-width="5"/>
-      <rect x="24" y="18" width="72" height="44" rx="2" fill="none" stroke="#f1f5f9" stroke-width="3"/>
-      <line x1="8" y1="74" x2="112" y2="74" stroke="#f1f5f9" stroke-width="5" stroke-linecap="round"/>
-      <path d="M40,74 Q60,82 80,74" fill="none" stroke="#f1f5f9" stroke-width="4" stroke-linecap="round"/>
+      <rect x="18" y="12" width="84" height="56" rx="4" fill="none" stroke="#1a1a1a" stroke-width="5"/>
+      <rect x="24" y="18" width="72" height="44" rx="2" fill="none" stroke="#1a1a1a" stroke-width="3"/>
+      <line x1="8" y1="74" x2="112" y2="74" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/>
+      <path d="M40,74 Q60,82 80,74" fill="none" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
     </svg>`,
   },
   {
@@ -192,8 +192,8 @@ export const SAMPLE_GRAPHICS = [
     id: 'gfx_chart_bar',
     name: 'Bar Chart',
     svg: `<svg viewBox="0 0 110 100" xmlns="http://www.w3.org/2000/svg">
-      <line x1="14" y1="8" x2="14" y2="84" stroke="#f1f5f9" stroke-width="4" stroke-linecap="round"/>
-      <line x1="14" y1="84" x2="100" y2="84" stroke="#f1f5f9" stroke-width="4" stroke-linecap="round"/>
+      <line x1="14" y1="8" x2="14" y2="84" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
+      <line x1="14" y1="84" x2="100" y2="84" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
       <rect x="22" y="44" width="16" height="40" fill="#3b82f6" rx="2"/>
       <rect x="44" y="26" width="16" height="58" fill="#10b981" rx="2"/>
       <rect x="66" y="54" width="16" height="30" fill="#f59e0b" rx="2"/>
@@ -204,8 +204,8 @@ export const SAMPLE_GRAPHICS = [
     id: 'gfx_chart_line',
     name: 'Line Chart',
     svg: `<svg viewBox="0 0 110 100" xmlns="http://www.w3.org/2000/svg">
-      <line x1="14" y1="8" x2="14" y2="84" stroke="#f1f5f9" stroke-width="4" stroke-linecap="round"/>
-      <line x1="14" y1="84" x2="100" y2="84" stroke="#f1f5f9" stroke-width="4" stroke-linecap="round"/>
+      <line x1="14" y1="8" x2="14" y2="84" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
+      <line x1="14" y1="84" x2="100" y2="84" stroke="#1a1a1a" stroke-width="4" stroke-linecap="round"/>
       <polyline points="22,72 44,50 66,60 88,24 100,30"
         fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
       <circle cx="22" cy="72" r="4" fill="#3b82f6"/>
@@ -270,7 +270,7 @@ export const ARROW_GRAPHICS = [
     name: 'Block →',
     svg: `<svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
       <path d="M5,28 H72 V12 L112,40 L72,68 V52 H5 Z"
-        fill="none" stroke="#f1f5f9" stroke-width="5" stroke-linejoin="round"/>
+        fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
     </svg>`,
   },
   {
@@ -278,7 +278,7 @@ export const ARROW_GRAPHICS = [
     name: 'Block ←',
     svg: `<svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
       <path d="M115,28 H48 V12 L8,40 L48,68 V52 H115 Z"
-        fill="none" stroke="#f1f5f9" stroke-width="5" stroke-linejoin="round"/>
+        fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
     </svg>`,
   },
   {
@@ -286,7 +286,7 @@ export const ARROW_GRAPHICS = [
     name: 'Block ↑',
     svg: `<svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg">
       <path d="M28,115 V48 H12 L40,8 L68,48 H52 V115 Z"
-        fill="none" stroke="#f1f5f9" stroke-width="5" stroke-linejoin="round"/>
+        fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
     </svg>`,
   },
   {
@@ -294,7 +294,7 @@ export const ARROW_GRAPHICS = [
     name: 'Block ↓',
     svg: `<svg viewBox="0 0 80 120" xmlns="http://www.w3.org/2000/svg">
       <path d="M28,5 V72 H12 L40,112 L68,72 H52 V5 Z"
-        fill="none" stroke="#f1f5f9" stroke-width="5" stroke-linejoin="round"/>
+        fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
     </svg>`,
   },
   {
@@ -302,7 +302,7 @@ export const ARROW_GRAPHICS = [
     name: 'Block ↖',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <path d="M8,8 L8,52 L24,36 L58,70 L70,58 L36,24 L52,8 Z"
-        fill="none" stroke="#f1f5f9" stroke-width="5" stroke-linejoin="round"/>
+        fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
     </svg>`,
   },
   {
@@ -310,7 +310,7 @@ export const ARROW_GRAPHICS = [
     name: 'Block ↗',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <path d="M92,8 L48,8 L64,24 L30,58 L42,70 L76,36 L92,52 Z"
-        fill="none" stroke="#f1f5f9" stroke-width="5" stroke-linejoin="round"/>
+        fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
     </svg>`,
   },
   {
@@ -318,7 +318,7 @@ export const ARROW_GRAPHICS = [
     name: 'Block ↙',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <path d="M8,92 L52,92 L36,76 L70,42 L58,30 L24,64 L8,48 Z"
-        fill="none" stroke="#f1f5f9" stroke-width="5" stroke-linejoin="round"/>
+        fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
     </svg>`,
   },
   {
@@ -326,7 +326,7 @@ export const ARROW_GRAPHICS = [
     name: 'Block ↘',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
       <path d="M92,92 L92,48 L76,64 L42,30 L30,42 L64,76 L48,92 Z"
-        fill="none" stroke="#f1f5f9" stroke-width="5" stroke-linejoin="round"/>
+        fill="none" stroke="#1a1a1a" stroke-width="5" stroke-linejoin="round"/>
     </svg>`,
   },
   // ── Thin line arrows ──
@@ -334,32 +334,32 @@ export const ARROW_GRAPHICS = [
     id: 'arrow_line_right',
     name: 'Arrow →',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <line x1="10" y1="50" x2="78" y2="50" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round"/>
-      <polyline points="58,28 82,50 58,72" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="10" y1="50" x2="78" y2="50" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round"/>
+      <polyline points="58,28 82,50 58,72" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   {
     id: 'arrow_line_left',
     name: 'Arrow ←',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <line x1="90" y1="50" x2="22" y2="50" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round"/>
-      <polyline points="42,28 18,50 42,72" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="90" y1="50" x2="22" y2="50" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round"/>
+      <polyline points="42,28 18,50 42,72" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   {
     id: 'arrow_line_up',
     name: 'Arrow ↑',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <line x1="50" y1="90" x2="50" y2="22" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round"/>
-      <polyline points="28,42 50,18 72,42" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="50" y1="90" x2="50" y2="22" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round"/>
+      <polyline points="28,42 50,18 72,42" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   {
     id: 'arrow_line_down',
     name: 'Arrow ↓',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <line x1="50" y1="10" x2="50" y2="78" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round"/>
-      <polyline points="28,58 50,82 72,58" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="50" y1="10" x2="50" y2="78" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round"/>
+      <polyline points="28,58 50,82 72,58" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   // ── Curved arrows ──
@@ -367,24 +367,24 @@ export const ARROW_GRAPHICS = [
     id: 'arrow_curve_right',
     name: 'Curve →',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <path d="M15,70 Q15,20 80,20" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linecap="round"/>
-      <polyline points="65,8 82,22 68,38" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M15,70 Q15,20 80,20" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round"/>
+      <polyline points="65,8 82,22 68,38" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   {
     id: 'arrow_curve_left',
     name: 'Curve ←',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <path d="M85,70 Q85,20 20,20" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linecap="round"/>
-      <polyline points="35,8 18,22 32,38" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M85,70 Q85,20 20,20" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round"/>
+      <polyline points="35,8 18,22 32,38" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   {
     id: 'arrow_curve_up',
     name: 'Curve ↑',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <path d="M30,85 Q80,85 80,20" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linecap="round"/>
-      <polyline points="68,35 80,18 92,35" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M30,85 Q80,85 80,20" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round"/>
+      <polyline points="68,35 80,18 92,35" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   // ── Double-headed arrows ──
@@ -392,18 +392,18 @@ export const ARROW_GRAPHICS = [
     id: 'arrow_double_horiz',
     name: '↔ Double H',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <line x1="18" y1="50" x2="82" y2="50" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round"/>
-      <polyline points="35,32 12,50 35,68" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-      <polyline points="65,32 88,50 65,68" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="18" y1="50" x2="82" y2="50" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round"/>
+      <polyline points="35,32 12,50 35,68" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="65,32 88,50 65,68" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   {
     id: 'arrow_double_vert',
     name: '↕ Double V',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <line x1="50" y1="18" x2="50" y2="82" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round"/>
-      <polyline points="32,35 50,12 68,35" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-      <polyline points="32,65 50,88 68,65" fill="none" stroke="#f1f5f9" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="50" y1="18" x2="50" y2="82" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round"/>
+      <polyline points="32,35 50,12 68,35" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="32,65 50,88 68,65" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   // ── Circular arrow ──
@@ -411,16 +411,16 @@ export const ARROW_GRAPHICS = [
     id: 'arrow_circular',
     name: 'Cycle ↻',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <path d="M50,15 A35,35 0 1 1 18,62" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linecap="round"/>
-      <polyline points="6,48 16,65 30,52" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M50,15 A35,35 0 1 1 18,62" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round"/>
+      <polyline points="6,48 16,65 30,52" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
   {
     id: 'arrow_circular_ccw',
     name: 'Cycle ↺',
     svg: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <path d="M50,15 A35,35 0 1 0 82,62" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linecap="round"/>
-      <polyline points="94,48 84,65 70,52" fill="none" stroke="#f1f5f9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M50,15 A35,35 0 1 0 82,62" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round"/>
+      <polyline points="94,48 84,65 70,52" fill="none" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>`,
   },
 ];

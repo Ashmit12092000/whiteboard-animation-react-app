@@ -21,9 +21,6 @@
  *                        Used to pick a grid colour that contrasts well.
  */
 
-const CANVAS_W = 800;
-const CANVAS_H = 450;
-
 // Colour that reads well on each board background
 const GRID_COLOURS = {
   whiteboard: 'rgba(99, 102, 241, 0.18)',   // indigo tint
@@ -42,9 +39,13 @@ export default function CanvasGrid({
   gridSize  = 40,
   gridType  = 'lines',
   boardType = 'whiteboard',
+  canvasW   = 800,
+  canvasH   = 450,
 }) {
   if (!visible) return null;
 
+  const CANVAS_W = canvasW;
+  const CANVAS_H = canvasH;
   const colour     = GRID_COLOURS[boardType]  ?? GRID_COLOURS.whiteboard;
   const axisColour = AXIS_COLOURS[boardType]  ?? AXIS_COLOURS.whiteboard;
 

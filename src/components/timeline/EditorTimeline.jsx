@@ -535,6 +535,17 @@ export default function EditorTimeline() {
           <button onClick={addScene} title="Add Scene" style={{ width: isMobile ? 44 : 64, height: isMobile ? 44 : 64, background: '#0f172a', border: '2px dashed #1e293b', borderRadius: 8, color: '#334155', fontSize: 22, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = '#f59e0b'; e.currentTarget.style.color = '#f59e0b'; }} onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.color = '#334155'; }}>+</button>
         </div>
 
+        {/* ── Camera keyframe action bar ──────────────────────────────────── */}
+        {!isMobile && scene && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderBottom: '1px solid #1e293b', flexShrink: 0, background: '#080d16' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1 }}>📷 Camera</span>
+            <button onClick={() => setCameraKeyframeFromCurrentView(selectedSceneId, playheadTime)} title="Add camera keyframe at current playhead time" style={{ background: '#1a2236', border: '1px solid #f59e0b44', borderRadius: 4, color: '#f59e0b', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: '3px 8px', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 4, transition: 'background 0.1s, border-color 0.1s' }} onMouseEnter={e => { e.currentTarget.style.background = '#243048'; e.currentTarget.style.borderColor = '#f59e0b'; }} onMouseLeave={e => { e.currentTarget.style.background = '#1a2236'; e.currentTarget.style.borderColor = '#f59e0b44'; }}>
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><path d="M4.5 0L9 4.5L4.5 9L0 4.5Z"/></svg>
+              Add Keyframe
+            </button>
+          </div>
+        )}
+
         {/* ── Track panel (desktop) ─────────────────────────────────────────── */}
         {!isMobile && scene && (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -617,11 +628,8 @@ export default function EditorTimeline() {
                   style={{ width: LABEL_W, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', height: 34, boxSizing: 'border-box', cursor: 'context-menu' }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, flex: 1 }}>📷 Cam</span>
-                  <button onClick={() => setCameraKeyframeFromCurrentView(selectedSceneId, playheadTime)} title="Add camera keyframe at current playhead time" style={{ background: '#1a2236', border: '1px solid #f59e0b44', borderRadius: 4, color: '#f59e0b', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: '2px 5px', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, transition: 'background 0.1s, border-color 0.1s' }} onMouseEnter={e => { e.currentTarget.style.background = '#243048'; e.currentTarget.style.borderColor = '#f59e0b'; }} onMouseLeave={e => { e.currentTarget.style.background = '#1a2236'; e.currentTarget.style.borderColor = '#f59e0b44'; }}>
-                    <svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><path d="M4.5 0L9 4.5L4.5 9L0 4.5Z"/></svg>
-                    +KF
-                  </button>
                 </div>
+
 
                 {/* Audio row label */}
                 <div style={{ width: LABEL_W, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', height: 34, boxSizing: 'border-box' }}>

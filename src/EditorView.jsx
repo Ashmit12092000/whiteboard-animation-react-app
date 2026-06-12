@@ -4,9 +4,9 @@ import EditorLibrary from './components/library/EditorLibrary';
 import EditorActions from './components/actions/EditorActions';
 import EditorTimeline from './components/timeline/EditorTimeline';
 import { useMobile } from './hooks/useMobile';
+import { useStore } from './store';
+import { getCanvasSize } from './utils/animation';
 
-const CANVAS_W = 800;
-const CANVAS_H = 450;
 const PANEL_MIN = 120;   // px — minimum bottom panel height (mobile)
 const PANEL_MAX = 520;   // px — maximum bottom panel height (mobile)
 const PANEL_DEFAULT = Math.round(window.innerHeight * 0.38);
@@ -18,6 +18,8 @@ const TL_DEFAULT = 220;  // px — default timeline height (desktop)
 
 export default function EditorView() {
   const isMobile = useMobile();
+  const project = useStore(s => s.project);
+  const { w: CANVAS_W, h: CANVAS_H } = getCanvasSize(project?.canvasSizeKey);
   const [mobilePanel, setMobilePanel] = useState('library');
 
   // ── Resizable panel height ────────────────────────────────────────────────
@@ -191,7 +193,7 @@ export default function EditorView() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [CANVAS_W, CANVAS_H]);
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
