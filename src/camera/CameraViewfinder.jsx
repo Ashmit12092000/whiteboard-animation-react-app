@@ -86,9 +86,44 @@ export default function CameraViewfinder({
 }) {
   // Live camera state for re-rendering the rect
   const [cam, setCam] = useState(() => ({ ...cameraEngine.state }));
+  // Ref to the viewfinder box div for direct DOM updates during drag (no React re-render lag)
+  const boxRef  = useRef(null);
+  const svgRef  = useRef(null);
+  const zoomRef = useRef(null);
 
   useEffect(() => {
-    const unsub = cameraEngine.subscribe(s => setCam({ ...s }));
+    const unsub = cameraEngine.subscribe(s => {
+      setCam({ ...s });
+      // Also imperatively update the box position so it tracks instantly
+      // (React batching can cause 1-frame lag during fast drag)
+      const vp   = getViewportBounds(s);
+      const tl   = worldToScreenCam(vp.x,            vp.y,             s);
+      const br   = worldToScreenCam(vp.x + vp.width, vp.y + vp.height, s);
+      const rL   = tl.x;
+      const rT   = tl.y;
+      const rW   = br.x - tl.x;
+      const rH   = br.y - tl.y;
+      if (boxRef.current) {
+        boxRef.current.style.left   = `${rL}px`;
+        boxRef.current.style.top    = `${rT}px`;
+        boxRef.current.style.width  = `${rW}px`;
+        boxRef.current.style.height = `${rH}px`;
+      }
+      if (zoomRef.current) {
+        zoomRef.current.textContent = `${Math.round(s.zoom * 100)}%`
+          + (s.x !== 0 || s.y !== 0 ? `  ${s.x > 0 ? '→' : '←'}${s.y > 0 ? '↓' : '↑'}` : '');
+      }
+      if (svgRef.current) {
+        const maskRect = svgRef.current.querySelector('#vf-mask rect:last-child');
+        const vigRect  = svgRef.current.querySelector('rect[mask]');
+        if (maskRect) {
+          maskRect.setAttribute('x',      String(Math.max(0, rL)));
+          maskRect.setAttribute('y',      String(Math.max(0, rT)));
+          maskRect.setAttribute('width',  String(Math.min(CANVAS_W - Math.max(0, rL), rW)));
+          maskRect.setAttribute('height', String(Math.min(CANVAS_H - Math.max(0, rT), rH)));
+        }
+      }
+    });
     cameraEngine.start();
     return unsub;
   }, []);
@@ -208,6 +243,7 @@ export default function CameraViewfinder({
     <>
       {/* Dark vignette outside the viewfinder rect */}
       <svg
+        ref={svgRef}
         style={{
           position: 'absolute', inset: 0,
           width: CANVAS_W, height: CANVAS_H,
@@ -237,6 +273,7 @@ export default function CameraViewfinder({
 
       {/* The viewfinder box itself */}
       <div
+        ref={boxRef}
         style={{
           position:     'absolute',
           left:         rectLeft,
@@ -298,7 +335,7 @@ export default function CameraViewfinder({
           whiteSpace:  'nowrap',
         }}>
           {/* Zoom readout */}
-          <span style={{
+          <span ref={zoomRef} style={{
             background:   'rgba(15,23,42,0.92)',
             border:       `1px solid rgba(245,158,11,0.35)`,
             color:        '#94a3b8',

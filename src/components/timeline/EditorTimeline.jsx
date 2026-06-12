@@ -60,37 +60,9 @@ function TimeRuler({ totalS, pxPerS }) {
   );
 }
 
-// ─── Context menu ─────────────────────────────────────────────────────────────
-function TrackContextMenu({ x, y, graphic, scene, onClose }) {
-  const duplicateGraphic   = useStore(s => s.duplicateGraphic);
-  const splitGraphic       = useStore(s => s.splitGraphic);
-  const deleteGraphic      = useStore(s => s.deleteGraphic);
-  const moveGraphicInList  = useStore(s => s.moveGraphicInList);
-
-  const idx     = scene.graphics.findIndex(g => g.id === graphic.id);
-  const isFirst = idx === 0;
-  const isLast  = idx === scene.graphics.length - 1;
-  const canSplit = graphic.duration / 2 >= MIN_DUR;
-
-  const items = [
-    { label: 'Move Earlier', icon: '↑', disabled: isFirst, action: () => { moveGraphicInList(graphic.id, -1); onClose(); } },
-    { label: 'Move Later',   icon: '↓', disabled: isLast,  action: () => { moveGraphicInList(graphic.id,  1); onClose(); } },
-    { sep: true },
-    { label: 'Duplicate', icon: '⧉', action: () => { duplicateGraphic(graphic.id); onClose(); } },
-    { sep: true },
-    {
-      label: 'Split at midpoint', icon: '✂',
-      disabled: !canSplit,
-      action: () => {
-        if (!canSplit) return;
-        splitGraphic(graphic.id);
-        onClose();
-      },
-    },
-    { sep: true },
-    { label: 'Delete', icon: '🗑', danger: true, action: () => { deleteGraphic(graphic.id); onClose(); } },
-  ];
-
+// ─── Context menu (shared render helper) ─────────────────────────────────────
+function CtxMenu({ x, y, items, onClose }) {
+  // Render above the click point (bottom = distance from top of viewport to click)
   return (
     <>
       <div style={{ position: 'fixed', inset: 0, zIndex: 900 }} onClick={onClose} />
@@ -98,11 +70,17 @@ function TrackContextMenu({ x, y, graphic, scene, onClose }) {
         position: 'fixed', left: x, bottom: window.innerHeight - y, zIndex: 1000,
         background: '#1f2937', border: '1px solid #374151',
         borderRadius: 8, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-        minWidth: 160, overflow: 'hidden',
+        minWidth: 175, overflow: 'hidden',
+        // clamp so it never goes off-screen left
+        transform: x > window.innerWidth - 185 ? 'translateX(-100%)' : undefined,
       }}>
         {items.map((item, i) =>
           item.sep ? (
             <div key={i} style={{ height: 1, background: '#374151', margin: '2px 0' }} />
+          ) : item.header ? (
+            <div key={i} style={{ padding: '5px 12px 3px', fontSize: 10, fontWeight: 700, color: '#4b5563', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+              {item.header}
+            </div>
           ) : (
             <button
               key={i}
@@ -118,7 +96,7 @@ function TrackContextMenu({ x, y, graphic, scene, onClose }) {
               onMouseEnter={e => { if (!item.disabled) e.currentTarget.style.background = '#374151'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}
             >
-              <span style={{ width: 14, textAlign: 'center', fontSize: 13 }}>{item.icon}</span>
+              <span style={{ width: 16, textAlign: 'center', fontSize: 13 }}>{item.icon}</span>
               {item.label}
             </button>
           )
@@ -128,7 +106,114 @@ function TrackContextMenu({ x, y, graphic, scene, onClose }) {
   );
 }
 
-// ─── Track bar ────────────────────────────────────────────────────────────────
+// ─── Graphic track context menu ───────────────────────────────────────────────
+function TrackContextMenu({ x, y, graphic, scene, onClose }) {
+  const duplicateGraphic   = useStore(s => s.duplicateGraphic);
+  const splitGraphic       = useStore(s => s.splitGraphic);
+  const deleteGraphic      = useStore(s => s.deleteGraphic);
+  const moveGraphicInList  = useStore(s => s.moveGraphicInList);
+  const updateGraphicProps = useStore(s => s.updateGraphicProps);
+
+  const idx      = scene.graphics.findIndex(g => g.id === graphic.id);
+  const isFirst  = idx === 0;
+  const isLast   = idx === scene.graphics.length - 1;
+  const canSplit = graphic.duration / 2 >= MIN_DUR;
+
+  // Type-specific items inserted before the delete separator
+  const typeItems = [];
+  if (graphic.type === 'text') {
+    typeItems.push(
+      { sep: true },
+      { header: 'Text' },
+      { label: 'Bold toggle',   icon: 'B', action: () => { updateGraphicProps(graphic.id, { bold:   !graphic.bold   }); onClose(); } },
+      { label: 'Italic toggle', icon: 'I', action: () => { updateGraphicProps(graphic.id, { italic: !graphic.italic }); onClose(); } },
+    );
+  }
+  if (graphic.type === 'image') {
+    typeItems.push(
+      { sep: true },
+      { header: 'Image' },
+      { label: 'Flip horizontal', icon: '↔', action: () => { updateGraphicProps(graphic.id, { flipX: !graphic.flipX }); onClose(); } },
+      { label: 'Flip vertical',   icon: '↕', action: () => { updateGraphicProps(graphic.id, { flipY: !graphic.flipY }); onClose(); } },
+    );
+  }
+  if (graphic.type === 'drawing') {
+    typeItems.push(
+      { sep: true },
+      { header: 'Drawing' },
+      { label: 'Speed ×0.5',  icon: '🐢', action: () => { updateGraphicProps(graphic.id, { hand_speed: 0.5  }); onClose(); } },
+      { label: 'Speed ×1',    icon: '▶',  action: () => { updateGraphicProps(graphic.id, { hand_speed: 1.0  }); onClose(); } },
+      { label: 'Speed ×2',    icon: '⚡', action: () => { updateGraphicProps(graphic.id, { hand_speed: 2.0  }); onClose(); } },
+    );
+  }
+
+  const items = [
+    { header: `${typeIcon(graphic.type)} ${graphic.type.charAt(0).toUpperCase() + graphic.type.slice(1)} Track` },
+    { sep: true },
+    { label: 'Move Earlier', icon: '↑', disabled: isFirst, action: () => { moveGraphicInList(graphic.id, -1); onClose(); } },
+    { label: 'Move Later',   icon: '↓', disabled: isLast,  action: () => { moveGraphicInList(graphic.id,  1); onClose(); } },
+    { sep: true },
+    { label: 'Duplicate',    icon: '⧉', action: () => { duplicateGraphic(graphic.id); onClose(); } },
+    { label: 'Split at midpoint', icon: '✂', disabled: !canSplit, action: () => { if (!canSplit) return; splitGraphic(graphic.id); onClose(); } },
+    ...typeItems,
+    { sep: true },
+    { label: 'Delete', icon: '🗑', danger: true, action: () => { deleteGraphic(graphic.id); onClose(); } },
+  ];
+
+  return <CtxMenu x={x} y={y} items={items} onClose={onClose} />;
+}
+
+// ─── Audio track context menu ─────────────────────────────────────────────────
+function AudioTrackContextMenu({ x, y, track, onClose }) {
+  const removeAudioTrack  = useStore(s => s.removeAudioTrack);
+  const updateAudioTrack  = useStore(s => s.updateAudioTrack);
+  const isTTS = track.type === 'tts';
+
+  const vol     = track.volume  ?? 1;
+  const loop    = track.loop    ?? false;
+  const fadeIn  = track.fadeIn  ?? 0;
+  const fadeOut = track.fadeOut ?? 0;
+
+  const items = [
+    { header: isTTS ? '🔊 TTS Track' : '🎙 Voice Track' },
+    { sep: true },
+    // Volume steps
+    { label: 'Volume 100%', icon: '🔊', action: () => { updateAudioTrack(track.id, { volume: 1.0 }); onClose(); } },
+    { label: 'Volume 75%',  icon: '🔉', action: () => { updateAudioTrack(track.id, { volume: 0.75 }); onClose(); } },
+    { label: 'Volume 50%',  icon: '🔉', action: () => { updateAudioTrack(track.id, { volume: 0.5 }); onClose(); } },
+    { label: 'Volume 25%',  icon: '🔈', action: () => { updateAudioTrack(track.id, { volume: 0.25 }); onClose(); } },
+    { sep: true },
+    // Fade
+    { label: fadeIn  > 0 ? 'Remove Fade In'  : 'Fade In (0.5s)',  icon: '↗', action: () => { updateAudioTrack(track.id, { fadeIn:  fadeIn  > 0 ? 0 : 0.5 }); onClose(); } },
+    { label: fadeOut > 0 ? 'Remove Fade Out' : 'Fade Out (0.5s)', icon: '↘', action: () => { updateAudioTrack(track.id, { fadeOut: fadeOut > 0 ? 0 : 0.5 }); onClose(); } },
+    { sep: true },
+    // Loop (voice only — TTS is regenerated each time)
+    ...(!isTTS ? [{ label: loop ? 'Disable Loop' : 'Enable Loop', icon: '🔁', action: () => { updateAudioTrack(track.id, { loop: !loop }); onClose(); } }, { sep: true }] : []),
+    { label: 'Delete', icon: '🗑', danger: true, action: () => { removeAudioTrack(track.id); onClose(); } },
+  ];
+
+  return <CtxMenu x={x} y={y} items={items} onClose={onClose} />;
+}
+
+// ─── Camera track context menu ────────────────────────────────────────────────
+function CameraTrackContextMenu({ x, y, sceneId, keyframes, onClose }) {
+  const setCameraKeyframeFromCurrentView = useStore(s => s.setCameraKeyframeFromCurrentView);
+  const deleteCameraKeyframe             = useStore(s => s.deleteCameraKeyframe);
+  const playheadTime = useStore(s => s.playheadTime);
+
+  const hasKeyframes = keyframes.length > 0;
+
+  const items = [
+    { header: '📷 Camera Track' },
+    { sep: true },
+    { label: 'Add Keyframe Here',      icon: '◆', action: () => { setCameraKeyframeFromCurrentView(sceneId, playheadTime); onClose(); } },
+    { sep: true },
+    { label: 'Delete All Keyframes', icon: '🗑', danger: true, disabled: !hasKeyframes,
+      action: () => { keyframes.forEach(kf => deleteCameraKeyframe(sceneId, kf.id)); onClose(); } },
+  ];
+
+  return <CtxMenu x={x} y={y} items={items} onClose={onClose} />;
+}
 function TrackBar({ graphic, startX, width, pxPerS, isSelected, onSelect, onContextMenu, onDurationChange }) {
   const colors  = TYPE_COLOR[graphic.type] ?? TYPE_COLOR.drawing;
   const [hovered, setHovered] = useState(false);
@@ -264,7 +349,6 @@ export default function EditorTimeline() {
   const setSelectedCameraKeyframeId = useStore(s => s.setSelectedCameraKeyframeId);
   const openCanvasPreview  = useStore(s => s.openCanvasPreview);
   const closeCanvasPreview = useStore(s => s.closeCanvasPreview);
-  const removeAudioTrack   = useStore(s => s.removeAudioTrack);
 
   // ── Voice recorder / TTS modals ──────────────────────────────────────────
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
@@ -276,7 +360,8 @@ export default function EditorTimeline() {
   const totalDurationS  = scene ? Math.max(getSceneDuration(scene), 1) : 4;
 
   // ── Context menu ─────────────────────────────────────────────────────────
-  const [ctxMenu, setCtxMenu] = useState(null);
+  const [ctxMenu,       setCtxMenu]       = useState(null);
+  const [cameraCtxMenu, setCameraCtxMenu] = useState(null);
 
   // ── Scene strip drag ─────────────────────────────────────────────────────
   const dragFromIdx = useRef(null);
@@ -527,7 +612,9 @@ export default function EditorTimeline() {
                 ))}
 
                 {/* Camera row label */}
-                <div style={{ width: LABEL_W, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', height: 34, boxSizing: 'border-box' }}>
+                <div
+                  onContextMenu={(e) => { e.preventDefault(); setCameraCtxMenu({ x: e.clientX, y: e.clientY }); }}
+                  style={{ width: LABEL_W, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', height: 34, boxSizing: 'border-box', cursor: 'context-menu' }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, flex: 1 }}>📷 Cam</span>
                   <button onClick={() => setCameraKeyframeFromCurrentView(selectedSceneId, playheadTime)} title="Add camera keyframe at current playhead time" style={{ background: '#1a2236', border: '1px solid #f59e0b44', borderRadius: 4, color: '#f59e0b', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: '2px 5px', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, transition: 'background 0.1s, border-color 0.1s' }} onMouseEnter={e => { e.currentTarget.style.background = '#243048'; e.currentTarget.style.borderColor = '#f59e0b'; }} onMouseLeave={e => { e.currentTarget.style.background = '#1a2236'; e.currentTarget.style.borderColor = '#f59e0b44'; }}>
@@ -586,7 +673,9 @@ export default function EditorTimeline() {
                   })}
 
                   {/* Camera track bar area */}
-                  <div style={{ height: 34, background: '#080d16', borderTop: '1px solid #1e293b', position: 'relative' }}>
+                  <div
+                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setCameraCtxMenu({ x: e.clientX, y: e.clientY }); }}
+                    style={{ height: 34, background: '#080d16', borderTop: '1px solid #1e293b', position: 'relative' }}>
                     <CameraKeyframeEditor
                       keyframes={cameraKeyframes}
                       totalDurationS={totalDurationS}
@@ -650,27 +739,25 @@ export default function EditorTimeline() {
           />
         )}
 
+        {/* Camera track context menu */}
+        {cameraCtxMenu && (
+          <CameraTrackContextMenu
+            x={cameraCtxMenu.x}
+            y={cameraCtxMenu.y}
+            sceneId={selectedSceneId}
+            keyframes={cameraKeyframes}
+            onClose={() => setCameraCtxMenu(null)}
+          />
+        )}
+
         {/* Audio track context menu */}
         {audioCtxMenu && (
-          <>
-            <div style={{ position: 'fixed', inset: 0, zIndex: 900 }} onClick={() => setAudioCtxMenu(null)} />
-            <div style={{
-              position: 'fixed', left: audioCtxMenu.x, bottom: window.innerHeight - audioCtxMenu.y, zIndex: 1000,
-              background: '#1f2937', border: '1px solid #374151',
-              borderRadius: 8, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-              minWidth: 160, overflow: 'hidden',
-            }}>
-              <button
-                onClick={() => { removeAudioTrack(audioCtxMenu.track.id); setAudioCtxMenu(null); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 14px', background: 'none', border: 'none', color: '#ef4444', fontSize: 12, cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#374151'}
-                onMouseLeave={e => e.currentTarget.style.background = 'none'}
-              >
-                <span style={{ width: 14, textAlign: 'center', fontSize: 13 }}>🗑</span>
-                Delete
-              </button>
-            </div>
-          </>
+          <AudioTrackContextMenu
+            x={audioCtxMenu.x}
+            y={audioCtxMenu.y}
+            track={audioCtxMenu.track}
+            onClose={() => setAudioCtxMenu(null)}
+          />
         )}
       </div>
 

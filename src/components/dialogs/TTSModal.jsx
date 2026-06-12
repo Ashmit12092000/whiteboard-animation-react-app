@@ -27,6 +27,22 @@ const TTS_VOICES = {
 
 const MAX_CHARS = 300;
 
+// ─── Shared with VoiceRecorderModal ──────────────────────────────────────────
+const AUDIO_CLEANING_OPTIONS = [
+  { key: 'noise_reduction', label: 'Noise Reduction', desc: 'Remove background hiss & hum' },
+  { key: 'normalize',       label: 'Normalize',       desc: 'Balance overall volume' },
+  { key: 'silence_trim',    label: 'Trim Silence',    desc: 'Remove silent start/end gaps' },
+];
+
+const AUDIO_FILTER_OPTIONS = [
+  { key: 'reverb',     label: 'Reverb',      desc: 'Add room ambience' },
+  { key: 'echo',       label: 'Echo',        desc: 'Subtle delay effect' },
+  { key: 'pitch_up',   label: 'Pitch Up',    desc: 'Raise pitch slightly' },
+  { key: 'pitch_down', label: 'Pitch Down',  desc: 'Lower pitch slightly' },
+  { key: 'telephone',  label: 'Telephone',   desc: 'Lo-fi telephone effect' },
+  { key: 'deep',       label: 'Deep Voice',  desc: 'Low & resonant tone' },
+];
+
 function estimateDuration(text, lang, pitch, rate) {
   return new Promise((resolve) => {
     const utt = new SpeechSynthesisUtterance(text);
@@ -51,6 +67,9 @@ export default function TTSModal({ onClose }) {
   const [ttsState,   setTtsState]   = useState('idle'); // idle | estimating | ready
   const [duration,   setDuration]   = useState(null);
   const [langOpen,   setLangOpen]   = useState(false);
+  const [activeTab,  setActiveTab]  = useState('cleaning');
+  const [cleaning,   setCleaning]   = useState([]);
+  const [filters,    setFilters]    = useState([]);
 
   const voices     = TTS_VOICES[language] || TTS_VOICES['en-US'];
   const selLang    = TTS_LANGUAGES.find(l => l.code === language);
@@ -92,6 +111,17 @@ export default function TTSModal({ onClose }) {
     window.speechSynthesis.speak(utt);
   };
 
+  const toggleFilter = (key, type) => {
+    if (type === 'cleaning') {
+      setCleaning(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+    } else {
+      setFilters(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+    }
+    // Reset generate state so user re-generates with new filter labels
+    setTtsState('idle');
+    setDuration(null);
+  };
+
   const addToTimeline = () => {
     if (!duration) return;
     const vc        = voices[voiceIdx] || voices[0];
@@ -99,7 +129,7 @@ export default function TTSModal({ onClose }) {
     const trackName = `TTS – ${langLabel} (${vc.name})`;
     const snippet   = text.slice(0, 30) + (text.length > 30 ? '…' : '');
 
-    addTTSTrack(`${trackName}: "${snippet}"`, { text, lang: language, pitch: vc.pitch, rate: vc.rate }, duration);
+    addTTSTrack(`${trackName}: "${snippet}"`, { text, lang: language, pitch: vc.pitch, rate: vc.rate }, duration, { cleaning, filters });
     onClose();
   };
 
@@ -108,7 +138,7 @@ export default function TTSModal({ onClose }) {
       style={{ position: 'fixed', inset: 0, zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) { window.speechSynthesis.cancel(); onClose(); } }}
     >
-      <div style={{ width: 360, background: '#0d1117', border: '1px solid #1e293b', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.7)' }}>
+      <div style={{ width: 380, background: '#0d1117', border: '1px solid #1e293b', borderRadius: 16, overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.7)' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #1e293b' }}>
@@ -193,6 +223,88 @@ export default function TTSModal({ onClose }) {
             <ActionBtn onClick={generate} disabled={!text.trim() || ttsState === 'estimating'} color="#2563eb" hoverColor="#1d4ed8">
               {ttsState === 'estimating' ? '⏳ Timing…' : '✨ Generate'}
             </ActionBtn>
+          </div>
+
+          {/* ── Audio filters panel ─────────────────────────────────────── */}
+          <div style={{ border: '1px solid #1e293b', borderRadius: 10, overflow: 'hidden' }}>
+            {/* Tabs */}
+            <div style={{ display: 'flex', borderBottom: '1px solid #1e293b' }}>
+              {[['cleaning', '✨ Cleaning'], ['effects', '🎛 Effects']].map(([tab, label]) => (
+                <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                  flex: 1, padding: '8px 0', border: 'none',
+                  background: activeTab === tab ? 'rgba(255,255,255,0.04)' : 'transparent',
+                  color: activeTab === tab ? (tab === 'cleaning' ? '#4ade80' : '#c084fc') : '#475569',
+                  fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  borderBottom: activeTab === tab ? `2px solid ${tab === 'cleaning' ? '#22c55e' : '#a855f7'}` : '2px solid transparent',
+                  transition: 'all 0.15s',
+                }}>
+                  {label}
+                  {tab === 'cleaning' && cleaning.length > 0 && (
+                    <span style={{ background: 'rgba(34,197,94,0.2)', color: '#4ade80', fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 99 }}>{cleaning.length}</span>
+                  )}
+                  {tab === 'effects' && filters.length > 0 && (
+                    <span style={{ background: 'rgba(168,85,247,0.2)', color: '#c084fc', fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 99 }}>{filters.length}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            <div style={{ padding: 8, maxHeight: 148, overflowY: 'auto' }}>
+              {activeTab === 'cleaning' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {AUDIO_CLEANING_OPTIONS.map(opt => {
+                    const active = cleaning.includes(opt.key);
+                    return (
+                      <button key={opt.key} onClick={() => toggleFilter(opt.key, 'cleaning')} style={{
+                        width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '7px 10px', borderRadius: 8, textAlign: 'left', cursor: 'pointer', transition: 'all 0.12s',
+                        border: active ? '1px solid rgba(34,197,94,0.35)' : '1px solid #1e293b',
+                        background: active ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.02)',
+                        color: active ? '#4ade80' : '#64748b',
+                      }}>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 600 }}>{opt.label}</div>
+                          <div style={{ fontSize: 10, opacity: 0.65, marginTop: 1 }}>{opt.desc}</div>
+                        </div>
+                        {active && <span style={{ color: '#4ade80', fontSize: 13 }}>✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {activeTab === 'effects' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  {AUDIO_FILTER_OPTIONS.map(opt => {
+                    const active = filters.includes(opt.key);
+                    return (
+                      <button key={opt.key} onClick={() => toggleFilter(opt.key, 'effects')} style={{
+                        display: 'flex', flexDirection: 'column', gap: 2, padding: '7px 9px', borderRadius: 8,
+                        textAlign: 'left', cursor: 'pointer', transition: 'all 0.12s',
+                        border: active ? '1px solid rgba(168,85,247,0.35)' : '1px solid #1e293b',
+                        background: active ? 'rgba(168,85,247,0.08)' : 'rgba(255,255,255,0.02)',
+                        color: active ? '#c084fc' : '#64748b',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 11, fontWeight: 600 }}>{opt.label}</span>
+                          {active && <span style={{ color: '#c084fc', fontSize: 11 }}>✓</span>}
+                        </div>
+                        <span style={{ fontSize: 10, opacity: 0.6 }}>{opt.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Status hint */}
+            <div style={{ borderTop: '1px solid #1e293b', padding: '6px 10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {(cleaning.length > 0 || filters.length > 0)
+                ? <span style={{ color: '#fbbf24', fontSize: 11 }}>⚠ Filters selected — re-generate to apply</span>
+                : <span style={{ color: '#334155', fontSize: 11 }}>Select filters, then Generate</span>
+              }
+            </div>
           </div>
 
           {/* Add to timeline — only after timing measured */}

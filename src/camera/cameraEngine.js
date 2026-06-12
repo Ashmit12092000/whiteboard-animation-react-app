@@ -71,9 +71,13 @@ export class CameraEngine {
 
   /** Immediately set camera state (no animation) */
   set(state) {
-    this.state   = { ...this.state, ...state };
-    this._target = { ...this.state };
-    this._velocity = { x: 0, y: 0, zoom: 0, rotation: 0 };
+    this.state      = { ...this.state, ...state };
+    this._target    = { ...this.state };
+    this._velocity  = { x: 0, y: 0, zoom: 0, rotation: 0 };
+    // Cancel any in-progress animation so the tick loop doesn't overwrite this state
+    this._mode      = 'free';
+    this._animFrom  = null;
+    this._animStartMs = null;
     this._notify();
   }
 
