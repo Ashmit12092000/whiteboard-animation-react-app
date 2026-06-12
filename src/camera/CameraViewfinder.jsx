@@ -23,7 +23,7 @@
  * use `worldToScreen()` from cameraUtils.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useId } from 'react';
 import { cameraEngine } from './cameraEngine';
 import { getViewportBounds, screenToWorld } from './cameraUtils';
 
@@ -91,8 +91,19 @@ export default function CameraViewfinder({
   const svgRef  = useRef(null);
   const zoomRef = useRef(null);
 
+  // Unique id per instance so the SVG mask never collides if component mounts twice
+  const uid = useId().replace(/:/g, '');
+  const maskId = `vf-mask-${uid}`;
+
   useEffect(() => {
+    // Guard flag: set to false during cleanup so the RAF-driven subscriber
+    // never touches React-managed DOM nodes after they've been removed.
+    // Without this, animateTo() keeps firing _notify() via RAF while React
+    // is tearing down refs, causing "removeChild: node is not a child" crashes.
+    let mounted = true;
+
     const unsub = cameraEngine.subscribe(s => {
+      if (!mounted) return;   // key guard: skip all DOM work after unmount
       setCam({ ...s });
       // Also imperatively update the box position so it tracks instantly
       // (React batching can cause 1-frame lag during fast drag)
@@ -114,8 +125,7 @@ export default function CameraViewfinder({
           + (s.x !== 0 || s.y !== 0 ? `  ${s.x > 0 ? '→' : '←'}${s.y > 0 ? '↓' : '↑'}` : '');
       }
       if (svgRef.current) {
-        const maskRect = svgRef.current.querySelector('#vf-mask rect:last-child');
-        const vigRect  = svgRef.current.querySelector('rect[mask]');
+        const maskRect = svgRef.current.querySelector(`#${maskId} rect:last-child`);
         if (maskRect) {
           maskRect.setAttribute('x',      String(Math.max(0, rL)));
           maskRect.setAttribute('y',      String(Math.max(0, rT)));
@@ -125,8 +135,11 @@ export default function CameraViewfinder({
       }
     });
     cameraEngine.start();
-    return unsub;
-  }, []);
+    return () => {
+      mounted = false;  // mark unmounted BEFORE unsubscribing so any in-flight RAF tick is a no-op
+      unsub();
+    };
+  }, [maskId]);
 
   // ── Compute viewfinder rect in screen space ──────────────────────────────
   const vp = getViewportBounds(cam);
@@ -254,7 +267,7 @@ export default function CameraViewfinder({
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          <mask id="vf-mask">
+          <mask id={maskId}>
             <rect width={CANVAS_W} height={CANVAS_H} fill="white" />
             <rect
               x={Math.max(0, rectLeft)} y={Math.max(0, rectTop)}
@@ -267,7 +280,7 @@ export default function CameraViewfinder({
         <rect
           width={CANVAS_W} height={CANVAS_H}
           fill="rgba(0,0,0,0.45)"
-          mask="url(#vf-mask)"
+          mask={`url(#${maskId})`}
         />
       </svg>
 

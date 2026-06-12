@@ -83,6 +83,7 @@ export class CameraEngine {
 
   /** Smoothly animate to a target state */
   animateTo(target, durationS = 0.8, easing = 'cinematic') {
+    this.stop();
     this._mode = 'follow';
     this._target = { ...this.state, ...target };
     this._animFrom     = { ...this.state };
@@ -90,6 +91,7 @@ export class CameraEngine {
     this._animEasing   = easing;
     this._animStartMs  = performance.now();
     this._velocity = { x: 0, y: 0, zoom: 0, rotation: 0 };
+    this.start();
   }
 
   /** Begin keyframe playback from a given time offset */
