@@ -261,10 +261,13 @@ export default function AnimatedSvgRenderer({
 
     return () => {
       cancelAnimationFrame(rafRef.current);
-      // Restore any DOM mutations
+      // Restore any DOM mutations. Pass svgEl so removeFillClip can scope its
+      // getElementById lookup; if svgEl has already been replaced by a new
+      // innerHTML assignment the clipPath nodes are already gone, and the
+      // parentNode guard in removeFillClip prevents the NotFoundError.
       meta.forEach(m => {
         restoreSavedFill(m.el);
-        removeFillClip(m.el);
+        removeFillClip(m.el, svgEl);
       });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -349,7 +352,7 @@ function restoreAllElements(svgEl) {
       el.style.removeProperty('stroke-dashoffset');
       el.style.removeProperty('opacity');
       restoreSavedFill(el);
-      removeFillClip(el);
+      removeFillClip(el, svgEl);
     });
 }
 
@@ -541,11 +544,20 @@ function driveFillClip(el, t) {
   rect.setAttribute('width', String(totalW * t));
 }
 
-function removeFillClip(el) {
+function removeFillClip(el, svgEl) {
   const id = el.dataset.clipId;
   if (!id) return;
-  el.removeAttribute('clip-path');
-  document.getElementById(id)?.remove();
+  // Guard: only remove clip-path attribute if el is still in the DOM
+  if (el.isConnected) el.removeAttribute('clip-path');
+  // Scope lookup to the SVG element when provided, otherwise fall back to
+  // document — but always guard with a parentNode check before removing to
+  // avoid the "node is not a child" NotFoundError when the SVG has already
+  // been replaced via innerHTML.
+  const root = svgEl ?? el.ownerSVGElement ?? document;
+  const cpEl = root.getElementById
+    ? root.getElementById(id)
+    : document.getElementById(id);
+  if (cpEl && cpEl.parentNode) cpEl.parentNode.removeChild(cpEl);
   delete el.dataset.clipId;
   delete el.dataset.clipBboxW;
 }
