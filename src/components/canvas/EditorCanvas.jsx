@@ -47,7 +47,9 @@ export default function EditorCanvas({ playing = false }) {
 
   const [cameraEditMode, setCameraEditMode] = useState(false);
   const [selectedKeyframe, setSelectedKeyframe] = useState(null);
-  const [playheadTime, setPlayheadTime] = useState(0);
+  // playheadTime comes from the store — shared with EditorTimeline.
+  // This means scrubbing in the timeline instantly updates the canvas preview.
+  const playheadTime = useStore(s => s.playheadTime);
 
   // Exit camera edit mode with Escape
   useEffect(() => {
@@ -56,19 +58,6 @@ export default function EditorCanvas({ playing = false }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [cameraEditMode]);
-
-  // Live playhead clock — ticks while playing so "Add Keyframe" stamps the right time
-  useEffect(() => {
-    if (!playing) return;
-    const start = performance.now();
-    let rafId;
-    const tick = () => {
-      setPlayheadTime((performance.now() - start) / 1000);
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
-  }, [playing]);
 
   // ── Refs ─────────────────────────────────────────────────────────────────
   const tipRef       = useRef({ active: false });

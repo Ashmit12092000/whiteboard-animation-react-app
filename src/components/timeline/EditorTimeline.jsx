@@ -4,6 +4,7 @@ import SceneThumbnail from './SceneThumbnail';
 import CameraKeyframeEditor from '../../camera/CameraKeyframeEditor';
 import { getSceneDuration } from '../../utils/animation';
 import { useMobile } from '../../hooks/useMobile';
+import { cameraEngine } from '../../camera/cameraEngine';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LABEL_W   = 130;
@@ -198,33 +199,46 @@ function TrackLabel({ graphic, isSelected, onSelect, onContextMenu }) {
 }
 
 // ─── Playhead needle ──────────────────────────────────────────────────────────
-function Playhead({ playheadX, trackCount, cameraRowH }) {
+function Playhead({ playheadX, trackCount, cameraRowH, onScrubStart }) {
   const totalH = HEADER_H + (trackCount * TRACK_H) + (cameraRowH ?? 34);
   return (
     <div
+      onMouseDown={onScrubStart}
       style={{
         position: 'absolute',
         left: playheadX,
         top: 0,
-        width: 2,
+        width: 18,
         height: totalH,
-        background: 'rgba(251,191,36,0.9)',
-        pointerEvents: 'none',
+        background: 'transparent',
+        cursor: 'ew-resize',
         zIndex: 20,
-        transform: 'translateX(-1px)',
-        boxShadow: '0 0 6px rgba(251,191,36,0.5)',
+        transform: 'translateX(-9px)',
+        userSelect: 'none',
       }}
     >
+      {/* Visible line centred in the hit zone */}
+      <div style={{
+        position: 'absolute',
+        left: 8,
+        top: 0,
+        width: 2,
+        height: '100%',
+        background: 'rgba(251,191,36,0.9)',
+        boxShadow: '0 0 6px rgba(251,191,36,0.5)',
+        pointerEvents: 'none',
+      }} />
       {/* Diamond head */}
       <div style={{
         position: 'absolute',
         top: HEADER_H - 6,
         left: '50%',
         transform: 'translateX(-50%) rotate(45deg)',
-        width: 8,
-        height: 8,
+        width: 10,
+        height: 10,
         background: '#fbbf24',
-        boxShadow: '0 0 4px rgba(251,191,36,0.8)',
+        boxShadow: '0 0 6px rgba(251,191,36,0.9)',
+        pointerEvents: 'none',
       }} />
     </div>
   );
@@ -274,16 +288,19 @@ export default function EditorTimeline() {
 
   // ── Playback state ────────────────────────────────────────────────────────
   const [isPlaying, setIsPlaying]     = useState(false);
-  const [playheadTime, setPlayheadTime] = useState(0); // seconds
-  const rafRef       = useRef(null);
-  const playStartRef = useRef(null);
-  const pauseTimeRef = useRef(0); // seconds elapsed when paused
+  // playheadTime lives in the store — single source of truth for both
+  // the timeline needle and EditorCanvas preview.
+  const playheadTime    = useStore(s => s.playheadTime);
+  const rafRef          = useRef(null);
+  const playStartRef    = useRef(null);
+  const pauseTimeRef    = useRef(0); // seconds elapsed when paused
+  const isScrubbing     = useRef(false);
 
-  // Keep the store in sync so EditorCanvas can read the live playhead time
-  // (used for camera keyframe stamping via "Set Keyframe" in the viewfinder).
+  // syncPlayhead updates both local store (so EditorCanvas reacts) and the
+  // camera engine (so camera scrubs in real time).
   const syncPlayhead = useCallback((t) => {
-    setPlayheadTime(t);
     setSharedPlayheadTime(t);
+    cameraEngine.scrubTo(t);
   }, [setSharedPlayheadTime]);
 
   const stopPlayback = useCallback(() => {
@@ -334,6 +351,40 @@ export default function EditorTimeline() {
     pauseTimeRef.current = 0;
     closeCanvasPreview();
   }, [stopPlayback, closeCanvasPreview, syncPlayhead]);
+
+  // ── Scrub: click or drag anywhere on the track area / ruler ──────────────
+  const xToTime = useCallback((clientX) => {
+    if (!scrollRef.current) return 0;
+    const rect = scrollRef.current.getBoundingClientRect();
+    const x = clientX - rect.left + scrollRef.current.scrollLeft;
+    return Math.max(0, Math.min(totalDurationS, x / pxPerS));
+  }, [pxPerS, totalDurationS]);
+
+  const handleScrubStart = useCallback((e) => {
+    if (isPlaying) {
+      // Pause playback while scrubbing
+      pauseTimeRef.current = playheadTime;
+      stopPlayback();
+    }
+    isScrubbing.current = true;
+    const t = xToTime(e.clientX);
+    syncPlayhead(t);
+    pauseTimeRef.current = t;
+
+    const onMove = (ev) => {
+      if (!isScrubbing.current) return;
+      const newT = xToTime(ev.clientX);
+      syncPlayhead(newT);
+      pauseTimeRef.current = newT;
+    };
+    const onUp = () => {
+      isScrubbing.current = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [isPlaying, playheadTime, stopPlayback, xToTime, syncPlayhead]);
 
   // Sync playhead scroll into view
   const scrollRef = useRef(null);
@@ -466,7 +517,7 @@ export default function EditorTimeline() {
                 <div style={{ width: LABEL_W, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', height: 34, boxSizing: 'border-box' }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, flex: 1 }}>📷 Cam</span>
-                  <button onClick={() => setCameraKeyframeFromCurrentView(selectedSceneId, 0)} title="Add camera keyframe at start" style={{ background: '#1a2236', border: '1px solid #f59e0b44', borderRadius: 4, color: '#f59e0b', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: '2px 5px', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, transition: 'background 0.1s, border-color 0.1s' }} onMouseEnter={e => { e.currentTarget.style.background = '#243048'; e.currentTarget.style.borderColor = '#f59e0b'; }} onMouseLeave={e => { e.currentTarget.style.background = '#1a2236'; e.currentTarget.style.borderColor = '#f59e0b44'; }}>
+                  <button onClick={() => setCameraKeyframeFromCurrentView(selectedSceneId, playheadTime)} title="Add camera keyframe at current playhead time" style={{ background: '#1a2236', border: '1px solid #f59e0b44', borderRadius: 4, color: '#f59e0b', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: '2px 5px', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, transition: 'background 0.1s, border-color 0.1s' }} onMouseEnter={e => { e.currentTarget.style.background = '#243048'; e.currentTarget.style.borderColor = '#f59e0b'; }} onMouseLeave={e => { e.currentTarget.style.background = '#1a2236'; e.currentTarget.style.borderColor = '#f59e0b44'; }}>
                     <svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><path d="M4.5 0L9 4.5L4.5 9L0 4.5Z"/></svg>
                     +KF
                   </button>
@@ -476,7 +527,8 @@ export default function EditorTimeline() {
               {/* Scrollable bar area */}
               <div
                 ref={scrollRef}
-                style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', position: 'relative' }}
+                onMouseDown={handleScrubStart}
+                style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', position: 'relative', cursor: 'crosshair' }}
               >
                 {/* Inner container — sized to full timeline width */}
                 <div style={{ minWidth: totalDurationS * pxPerS + 32, position: 'relative' }}>
@@ -520,11 +572,12 @@ export default function EditorTimeline() {
                     />
                   </div>
 
-                  {/* Playhead needle — sits over all rows */}
+                  {/* Playhead needle — draggable */}
                   <Playhead
                     playheadX={playheadX}
                     trackCount={tracksWithTime.length}
                     cameraRowH={34}
+                    onScrubStart={handleScrubStart}
                   />
                 </div>
               </div>

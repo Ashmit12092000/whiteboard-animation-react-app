@@ -60,6 +60,9 @@ export const useStore = create((set, get) => ({
   showCanvasPreview: false,
   showNewProjectModal: false,
 
+  // ── Playhead (shared between timeline and canvas) ─────────────────────────
+  playheadTime: 0, // seconds
+
   // ── Grid & snap ───────────────────────────────────────────────────────────────
   // showGrid:   whether the visual grid overlay is visible
   // snapToGrid: whether drag/resize positions are snapped to grid intersections
@@ -547,6 +550,9 @@ export const useStore = create((set, get) => ({
       }
     }));
   },
+
+  // ── Playhead ──────────────────────────────────────────────────────────────────
+  setPlayheadTime(t) { set({ playheadTime: t }); },
 
   // ── Modal toggles ─────────────────────────────────────────────────────────────
   openPreviewModal() { set({ showPreviewModal: true }); },
