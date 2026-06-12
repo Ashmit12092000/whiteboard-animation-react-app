@@ -687,6 +687,7 @@ export default function EditorTimeline() {
                     <CameraKeyframeEditor
                       keyframes={cameraKeyframes}
                       totalDurationS={totalDurationS}
+                      pxPerS={pxPerS}
                       selectedSceneId={selectedSceneId}
                       onUpdate={updateCameraKeyframe}
                       onDelete={deleteCameraKeyframe}

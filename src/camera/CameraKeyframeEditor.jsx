@@ -21,6 +21,7 @@ const MARKER_W = 12;
 export default function CameraKeyframeEditor({
   keyframes,
   totalDurationS,
+  pxPerS,
   selectedSceneId,
   onUpdate,
   onDelete,
@@ -32,14 +33,13 @@ export default function CameraKeyframeEditor({
   const dragRef = useRef(null);
 
   const timeToX = useCallback((t) => {
-    if (!trackRef.current || totalDurationS <= 0) return 0;
-    return (t / totalDurationS) * trackRef.current.clientWidth;
-  }, [totalDurationS]);
+    return t * pxPerS;
+  }, [pxPerS]);
 
   const xToTime = useCallback((x) => {
-    if (!trackRef.current || totalDurationS <= 0) return 0;
-    return Math.max(0, (x / trackRef.current.clientWidth) * totalDurationS);
-  }, [totalDurationS]);
+    if (totalDurationS <= 0 || !pxPerS) return 0;
+    return Math.max(0, Math.min(totalDurationS, x / pxPerS));
+  }, [totalDurationS, pxPerS]);
 
   const handleMarkerMouseDown = useCallback((e, kf) => {
     e.preventDefault();
@@ -54,11 +54,9 @@ export default function CameraKeyframeEditor({
     const startTime = kf.startTime;
 
     const onMove = (ev) => {
-      if (!trackRef.current) return;
-      const trackRect = trackRef.current.getBoundingClientRect();
       const dx = ev.clientX - startX;
-      const dtRatio = dx / trackRect.width;
-      const newTime = Math.max(0, Math.min(totalDurationS, startTime + dtRatio * totalDurationS));
+      const dt = dx / pxPerS;
+      const newTime = Math.max(0, Math.min(totalDurationS, startTime + dt));
       onUpdate?.(selectedSceneId, kf.id, { startTime: newTime });
     };
 
@@ -71,7 +69,7 @@ export default function CameraKeyframeEditor({
     dragRef.current = kf.id;
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-  }, [onSelect, onUpdate, selectedSceneId, totalDurationS]);
+  }, [onSelect, onUpdate, selectedSceneId, totalDurationS, pxPerS]);
 
   const handleTrackClick = useCallback((e) => {
     if (dragRef.current) return;

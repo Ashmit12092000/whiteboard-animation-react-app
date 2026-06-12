@@ -52,7 +52,7 @@ export const useStore = create((set, get) => ({
   project: null,
   selectedSceneId: null,
   selectedGraphicId: null,
-  undoStack: [],
+  selectedCameraKeyframeId: null,
   redoStack: [],
 
   // ── UI state ─────────────────────────────────────────────────────────────────
@@ -293,6 +293,10 @@ export const useStore = create((set, get) => ({
   // ── Graphic actions ────────────────────────────────────────────────────────
   selectGraphic(graphicId) {
     set({ selectedGraphicId: graphicId });
+  },
+
+  setSelectedCameraKeyframeId(keyframeId) {
+    set({ selectedCameraKeyframeId: keyframeId });
   },
 
   addDrawingGraphic(svgAsset) {
