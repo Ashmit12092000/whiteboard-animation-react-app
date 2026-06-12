@@ -73,6 +73,7 @@ function buildFilterChain(ctx, filterId) {
 }
 
 async function playAudioTrack(audioCtx, track) {
+  if (track.type === 'tts' || !track.src) return null;
   try {
     const resp    = await fetch(track.src);
     const arrBuf  = await resp.arrayBuffer();
@@ -198,6 +199,7 @@ export default function PreviewModal() {
       try { audioCtxRef.current.close(); } catch {}
       audioCtxRef.current = null;
     }
+    window.speechSynthesis.cancel();
   }, []);
 
   const startAudioTracks = useCallback(async (tracks) => {
@@ -207,6 +209,18 @@ export default function PreviewModal() {
     audioCtxRef.current = ctx;
     const sources = await Promise.all(tracks.map(t => playAudioTrack(ctx, t)));
     audioSourcesRef.current = sources.filter(Boolean);
+
+    // Speak TTS tracks
+    tracks.filter(t => t.type === 'tts' && t.speech?.text).forEach(t => {
+      const { text, lang, pitch, rate } = t.speech;
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = lang; utt.pitch = pitch; utt.rate = rate;
+      utt.volume = t.volume ?? 1;
+      const voices = window.speechSynthesis.getVoices();
+      const match  = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+      if (match) utt.voice = match;
+      window.speechSynthesis.speak(utt);
+    });
   }, [audioMuted, stopAllAudio]);
 
   const boardStyle = getBoardStyle(project?.boardType ?? 'whiteboard');

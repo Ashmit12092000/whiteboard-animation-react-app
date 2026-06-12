@@ -5,6 +5,8 @@ import CameraKeyframeEditor from '../../camera/CameraKeyframeEditor';
 import { getSceneDuration } from '../../utils/animation';
 import { useMobile } from '../../hooks/useMobile';
 import { cameraEngine } from '../../camera/cameraEngine';
+import VoiceRecorderModal from '../dialogs/VoiceRecorderModal';
+import TTSModal from '../dialogs/TTSModal';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LABEL_W   = 130;
@@ -93,7 +95,7 @@ function TrackContextMenu({ x, y, graphic, scene, onClose }) {
     <>
       <div style={{ position: 'fixed', inset: 0, zIndex: 900 }} onClick={onClose} />
       <div style={{
-        position: 'fixed', left: x, top: y, zIndex: 1000,
+        position: 'fixed', left: x, bottom: window.innerHeight - y, zIndex: 1000,
         background: '#1f2937', border: '1px solid #374151',
         borderRadius: 8, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
         minWidth: 160, overflow: 'hidden',
@@ -200,7 +202,7 @@ function TrackLabel({ graphic, isSelected, onSelect, onContextMenu }) {
 
 // ─── Playhead needle ──────────────────────────────────────────────────────────
 function Playhead({ playheadX, trackCount, cameraRowH, onScrubStart }) {
-  const totalH = HEADER_H + (trackCount * TRACK_H) + (cameraRowH ?? 34);
+  const totalH = HEADER_H + (trackCount * TRACK_H) + (cameraRowH ?? 34) + 34;
   return (
     <div
       onMouseDown={onScrubStart}
@@ -262,6 +264,12 @@ export default function EditorTimeline() {
   const setSelectedCameraKeyframeId = useStore(s => s.setSelectedCameraKeyframeId);
   const openCanvasPreview  = useStore(s => s.openCanvasPreview);
   const closeCanvasPreview = useStore(s => s.closeCanvasPreview);
+  const removeAudioTrack   = useStore(s => s.removeAudioTrack);
+
+  // ── Voice recorder / TTS modals ──────────────────────────────────────────
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [showTTSModal, setShowTTSModal] = useState(false);
+  const [audioCtxMenu, setAudioCtxMenu] = useState(null);
 
   const scene           = project?.scenes.find(s => s.id === selectedSceneId);
   const cameraKeyframes = getCameraKeyframes(selectedSceneId);
@@ -284,7 +292,11 @@ export default function EditorTimeline() {
     return () => ro.disconnect();
   }, []);
 
-  const pxPerS = Math.max(60, (trackAreaW - 16) / totalDurationS);
+  const MIN_VISIBLE_S = 6;
+  const pxPerS = Math.min(
+    Math.max(60, (trackAreaW - 16) / totalDurationS),
+    Math.max(60, (trackAreaW - 16) / MIN_VISIBLE_S)
+  );
 
   // ── Playback state ────────────────────────────────────────────────────────
   const [isPlaying, setIsPlaying]     = useState(false);
@@ -411,6 +423,7 @@ export default function EditorTimeline() {
 
   const playheadX = playheadTime * pxPerS;
   const formattedTime = `${Math.floor(playheadTime / 60).toString().padStart(2, '0')}:${(playheadTime % 60).toFixed(1).padStart(4, '0')}`;
+  const audioTracks = project?.audioTracks ?? [];
 
   // ── Scene drag handlers ───────────────────────────────────────────────────
   const handleDragStart  = useCallback((idx) => (e) => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('application/scene-index', String(idx)); dragFromIdx.current = idx; setTimeout(() => { if (e.currentTarget) e.currentTarget.style.opacity = '0.4'; }, 0); }, []);
@@ -522,6 +535,18 @@ export default function EditorTimeline() {
                     +KF
                   </button>
                 </div>
+
+                {/* Audio row label */}
+                <div style={{ width: LABEL_W, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', height: 34, boxSizing: 'border-box' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, flex: 1 }}>🎵 Audio</span>
+                  <button onClick={() => setShowVoiceRecorder(true)} title="Record voice" style={{ width: 20, height: 20, background: '#1a2236', border: '1px solid #ef444444', borderRadius: 4, color: '#f87171', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.1s, border-color 0.1s' }} onMouseEnter={e => { e.currentTarget.style.background = '#243048'; e.currentTarget.style.borderColor = '#ef4444'; }} onMouseLeave={e => { e.currentTarget.style.background = '#1a2236'; e.currentTarget.style.borderColor = '#ef444444'; }}>
+                    🎙
+                  </button>
+                  <button onClick={() => setShowTTSModal(true)} title="Text to speech" style={{ width: 20, height: 20, background: '#1a2236', border: '1px solid #3b82f644', borderRadius: 4, color: '#60a5fa', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.1s, border-color 0.1s' }} onMouseEnter={e => { e.currentTarget.style.background = '#243048'; e.currentTarget.style.borderColor = '#3b82f6'; }} onMouseLeave={e => { e.currentTarget.style.background = '#1a2236'; e.currentTarget.style.borderColor = '#3b82f644'; }}>
+                    🔊
+                  </button>
+                </div>
               </div>
 
               {/* Scrollable bar area */}
@@ -572,6 +597,34 @@ export default function EditorTimeline() {
                     />
                   </div>
 
+                  {/* Audio track bar area */}
+                  <div style={{ height: 34, background: '#080d16', borderTop: '1px solid #1e293b', position: 'relative', overflow: 'hidden' }}>
+                    {audioTracks.map((track) => {
+                      const dur   = track.duration ?? 1;
+                      const width = dur * pxPerS;
+                      const isTTS = track.type === 'tts';
+                      return (
+                        <div
+                          key={track.id}
+                          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setAudioCtxMenu({ x: e.clientX, y: e.clientY, track }); }}
+                          title={track.name}
+                          style={{
+                            position: 'absolute', left: 0, top: 4, width: Math.max(6, width), height: 26,
+                            borderRadius: 4, boxSizing: 'border-box', overflow: 'hidden',
+                            background: isTTS ? '#1d4ed8' : '#b45309',
+                            border: '1.5px solid rgba(255,255,255,0.18)',
+                            display: 'flex', alignItems: 'center', cursor: 'context-menu', userSelect: 'none',
+                          }}
+                        >
+                          <span style={{ position: 'absolute', left: 6, right: 6, fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.92)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', pointerEvents: 'none' }}>
+                            {isTTS ? '🔊' : '🎙'} {track.name}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+
                   {/* Playhead needle — draggable */}
                   <Playhead
                     playheadX={playheadX}
@@ -596,7 +649,40 @@ export default function EditorTimeline() {
             onClose={() => setCtxMenu(null)}
           />
         )}
+
+        {/* Audio track context menu */}
+        {audioCtxMenu && (
+          <>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 900 }} onClick={() => setAudioCtxMenu(null)} />
+            <div style={{
+              position: 'fixed', left: audioCtxMenu.x, bottom: window.innerHeight - audioCtxMenu.y, zIndex: 1000,
+              background: '#1f2937', border: '1px solid #374151',
+              borderRadius: 8, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+              minWidth: 160, overflow: 'hidden',
+            }}>
+              <button
+                onClick={() => { removeAudioTrack(audioCtxMenu.track.id); setAudioCtxMenu(null); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 14px', background: 'none', border: 'none', color: '#ef4444', fontSize: 12, cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#374151'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                <span style={{ width: 14, textAlign: 'center', fontSize: 13 }}>🗑</span>
+                Delete
+              </button>
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Voice recorder modal */}
+      {showVoiceRecorder && (
+        <VoiceRecorderModal onClose={() => setShowVoiceRecorder(false)} />
+      )}
+
+      {/* TTS modal */}
+      {showTTSModal && (
+        <TTSModal onClose={() => setShowTTSModal(false)} />
+      )}
     </>
   );
 }

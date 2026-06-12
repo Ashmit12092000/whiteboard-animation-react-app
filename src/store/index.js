@@ -531,6 +531,20 @@ export const useStore = create((set, get) => ({
     }));
   },
 
+  addTTSTrack(name, speech, duration) {
+    set(state => produce(state, draft => {
+      if (!draft.project.audioTracks) draft.project.audioTracks = [];
+      draft.project.audioTracks.push({
+        id: crypto.randomUUID(),
+        name,
+        type: 'tts',
+        speech, // { text, lang, pitch, rate }
+        duration,
+        volume: 1, trimStart: 0, trimEnd: 1, fadeIn: 0, fadeOut: 0, filter: 'none', loop: false,
+      });
+    }));
+  },
+
   removeAudioTrack(trackId) {
     set(state => produce(state, draft => {
       if (!draft.project.audioTracks) return;
