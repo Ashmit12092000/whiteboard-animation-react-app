@@ -9,6 +9,7 @@ import CameraMiniMap from '../../camera/CameraMiniMap';
 import CameraViewfinder from '../../camera/CameraViewfinder';
 import { useCameraPlayback, useWheelZoom } from '../../camera/cameraHooks';
 import { cameraEngine } from '../../camera/cameraEngine';
+import CanvasGrid from './CanvasGrid';
 
 const CANVAS_W = 800;
 const CANVAS_H = 450;
@@ -30,6 +31,14 @@ export default function EditorCanvas({ playing = false }) {
   const selectedSceneId    = useStore(s => s.selectedSceneId);
   const getCameraKeyframes = useStore(s => s.getCameraKeyframes);
   const setCameraKeyframeFromCurrentView = useStore(s => s.setCameraKeyframeFromCurrentView);
+
+  // Grid & snap state
+  const showGrid    = useStore(s => s.showGrid);
+  const snapToGrid  = useStore(s => s.snapToGrid);
+  const gridSize    = useStore(s => s.gridSize);
+  const gridType    = useStore(s => s.gridType);
+  const toggleGrid  = useStore(s => s.toggleGrid);
+  const toggleSnap  = useStore(s => s.toggleSnap);
 
   const scene           = getSelectedScene();
   const boardStyle      = getBoardStyle(project?.boardType ?? 'whiteboard');
@@ -137,6 +146,13 @@ export default function EditorCanvas({ playing = false }) {
 
   const ANIM_BLEED = playing ? 80 : 0;
 
+  // Snap a world-coordinate value to the nearest grid line.
+  // Used by GraphicItem drag/resize via the snapToGrid prop.
+  const snap = useCallback((v) => {
+    if (!snapToGrid || gridSize <= 0) return v;
+    return Math.round(v / gridSize) * gridSize;
+  }, [snapToGrid, gridSize]);
+
   return (
     <div
       ref={outerRef}
@@ -157,6 +173,14 @@ export default function EditorCanvas({ playing = false }) {
 
       {/* ── Camera-transformed world space ─────────────────────────────── */}
       <CameraLayer>
+        {/* Grid overlay — in world space so it zooms/pans with the camera */}
+        <CanvasGrid
+          visible={showGrid && !playing}
+          gridSize={gridSize}
+          gridType={gridType}
+          boardType={project?.boardType ?? 'whiteboard'}
+        />
+
         {/*
           bleedRef div:
           - lives inside CameraLayer → its getBoundingClientRect() returns
@@ -187,6 +211,7 @@ export default function EditorCanvas({ playing = false }) {
               seqDelay={g.seqDelay}
               onTipMove={makeTipHandler(g.id)}
               playStartTime={playStartRef.current}
+              snap={snap}
             />
           ))}
 
@@ -236,6 +261,14 @@ export default function EditorCanvas({ playing = false }) {
         onToggleCameraEdit={() => setCameraEditMode(m => !m)}
         onAddKeyframe={(t) => setCameraKeyframeFromCurrentView(selectedSceneId, t)}
         playheadTime={playheadTime}
+        showGrid={showGrid}
+        snapToGrid={snapToGrid}
+        gridSize={gridSize}
+        gridType={gridType}
+        onToggleGrid={toggleGrid}
+        onToggleSnap={toggleSnap}
+        onSetGridSize={useStore(s => s.setGridSize)}
+        onSetGridType={useStore(s => s.setGridType)}
       />
 
       <CameraMiniMap

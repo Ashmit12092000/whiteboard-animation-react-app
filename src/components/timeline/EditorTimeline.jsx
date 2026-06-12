@@ -244,6 +244,8 @@ export default function EditorTimeline() {
   const updateCameraKeyframe     = useStore(s => s.updateCameraKeyframe);
   const deleteCameraKeyframe     = useStore(s => s.deleteCameraKeyframe);
   const setCameraKeyframeFromCurrentView = useStore(s => s.setCameraKeyframeFromCurrentView);
+  const setSharedPlayheadTime    = useStore(s => s.setPlayheadTime);
+  const setSelectedCameraKeyframeId = useStore(s => s.setSelectedCameraKeyframeId);
   const openCanvasPreview  = useStore(s => s.openCanvasPreview);
   const closeCanvasPreview = useStore(s => s.closeCanvasPreview);
 
@@ -277,6 +279,13 @@ export default function EditorTimeline() {
   const playStartRef = useRef(null);
   const pauseTimeRef = useRef(0); // seconds elapsed when paused
 
+  // Keep the store in sync so EditorCanvas can read the live playhead time
+  // (used for camera keyframe stamping via "Set Keyframe" in the viewfinder).
+  const syncPlayhead = useCallback((t) => {
+    setPlayheadTime(t);
+    setSharedPlayheadTime(t);
+  }, [setSharedPlayheadTime]);
+
   const stopPlayback = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
     setIsPlaying(false);
@@ -291,17 +300,17 @@ export default function EditorTimeline() {
     const tick = () => {
       const elapsed = (performance.now() - playStartRef.current) / 1000;
       if (elapsed >= totalDurationS) {
-        setPlayheadTime(totalDurationS);
+        syncPlayhead(totalDurationS);
         pauseTimeRef.current = 0;
         setIsPlaying(false);
         closeCanvasPreview();
         return;
       }
-      setPlayheadTime(elapsed);
+      syncPlayhead(elapsed);
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
-  }, [totalDurationS]);
+  }, [totalDurationS, syncPlayhead]);
 
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {
@@ -311,20 +320,20 @@ export default function EditorTimeline() {
       // If at end, restart from 0
       if (playheadTime >= totalDurationS) {
         pauseTimeRef.current = 0;
-        setPlayheadTime(0);
+        syncPlayhead(0);
       }
       openCanvasPreview();
       // Small delay to let preview mount before animation begins
       setTimeout(() => startPlayback(), 30);
     }
-  }, [isPlaying, playheadTime, totalDurationS, stopPlayback, startPlayback]);
+  }, [isPlaying, playheadTime, totalDurationS, stopPlayback, startPlayback, syncPlayhead]);
 
   const handleStop = useCallback(() => {
     stopPlayback();
-    setPlayheadTime(0);
+    syncPlayhead(0);
     pauseTimeRef.current = 0;
     closeCanvasPreview();
-  }, [stopPlayback, closeCanvasPreview]);
+  }, [stopPlayback, closeCanvasPreview, syncPlayhead]);
 
   // Sync playhead scroll into view
   const scrollRef = useRef(null);
@@ -507,6 +516,7 @@ export default function EditorTimeline() {
                       selectedSceneId={selectedSceneId}
                       onUpdate={updateCameraKeyframe}
                       onDelete={deleteCameraKeyframe}
+                      onSelect={(kf) => setSelectedCameraKeyframeId(kf?.id ?? null)}
                     />
                   </div>
 

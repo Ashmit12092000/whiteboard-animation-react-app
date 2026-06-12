@@ -19,11 +19,14 @@ const HANDLES = [
   { id: 'w',  cursor: 'w-resize',  top: '50%',left: -5,   transform: 'translateY(-50%)' },
 ];
 
-export default function GraphicItem({ graphic, isSelected, playing, onTipMove, seqDelay, playStartTime }) {
+export default function GraphicItem({ graphic, isSelected, playing, onTipMove, seqDelay, playStartTime, snap }) {
   const moveGraphic   = useStore(s => s.moveGraphic);
   const resizeGraphic = useStore(s => s.resizeGraphic);
   const rotateGraphic = useStore(s => s.rotateGraphic);
   const selectGraphic = useStore(s => s.selectGraphic);
+
+  // Identity snap when no snap function is provided
+  const snapVal = snap ?? (v => v);
 
   const dragState      = useRef(null);
   const pinchState     = useRef(null);
@@ -58,7 +61,10 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
     dragState.current = { startX: e.clientX - graphic.x, startY: e.clientY - graphic.y };
     const onMove = (ev) => {
       if (!dragState.current) return;
-      moveGraphic(graphic.id, ev.clientX - dragState.current.startX, ev.clientY - dragState.current.startY);
+      moveGraphic(graphic.id,
+        snapVal(ev.clientX - dragState.current.startX),
+        snapVal(ev.clientY - dragState.current.startY),
+      );
     };
     const onUp = () => {
       dragState.current = null;
@@ -96,7 +102,10 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
         clearTimeout(longPressTimer.current);
       }
       if (!dragState.current || longPressFired.current) return;
-      moveGraphic(graphic.id, touch.clientX - dragState.current.startX, touch.clientY - dragState.current.startY);
+      moveGraphic(graphic.id,
+        snapVal(touch.clientX - dragState.current.startX),
+        snapVal(touch.clientY - dragState.current.startY),
+      );
     };
     const onEnd = () => {
       clearTimeout(longPressTimer.current);
@@ -145,10 +154,10 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
     const onMove = (ev) => {
       const dx = ev.clientX - startX, dy = ev.clientY - startY;
       let newW = startW, newH = startH, newX = startGX, newY = startGY;
-      if (handleId.includes('e')) newW = Math.max(30, startW + dx);
-      if (handleId.includes('w')) { newW = Math.max(30, startW - dx); newX = startGX + (startW - newW); }
-      if (handleId.includes('s')) newH = Math.max(20, startH + dy);
-      if (handleId.includes('n')) { newH = Math.max(20, startH - dy); newY = startGY + (startH - newH); }
+      if (handleId.includes('e')) newW = Math.max(30, snapVal(startW + dx));
+      if (handleId.includes('w')) { newW = Math.max(30, snapVal(startW - dx)); newX = snapVal(startGX + (startW - newW)); }
+      if (handleId.includes('s')) newH = Math.max(20, snapVal(startH + dy));
+      if (handleId.includes('n')) { newH = Math.max(20, snapVal(startH - dy)); newY = snapVal(startGY + (startH - newH)); }
       resizeGraphic(graphic.id, newW, newH, newX, newY);
     };
     const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };

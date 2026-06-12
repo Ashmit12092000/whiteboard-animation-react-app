@@ -59,6 +59,16 @@ export const useStore = create((set, get) => ({
   showPreviewModal: false,
   showCanvasPreview: false,
   showNewProjectModal: false,
+
+  // ── Grid & snap ───────────────────────────────────────────────────────────────
+  // showGrid:   whether the visual grid overlay is visible
+  // snapToGrid: whether drag/resize positions are snapped to grid intersections
+  // gridSize:   world-space pixels between grid lines (20 | 40 | 80)
+  // gridType:   'lines' | 'dots'
+  showGrid:   false,
+  snapToGrid: false,
+  gridSize:   40,
+  gridType:   'lines',
   showSceneSettingsModal: false,
   showProjectSettingsModal: false,
   toast: null, // { message, type }
@@ -545,6 +555,12 @@ export const useStore = create((set, get) => ({
   closeCanvasPreview() { set({ showCanvasPreview: false }); },
   openNewProjectModal() { set({ showNewProjectModal: true }); },
   closeNewProjectModal() { set({ showNewProjectModal: false }); },
+
+  // ── Grid & snap actions ───────────────────────────────────────────────────────
+  toggleGrid()    { set(s => ({ showGrid: !s.showGrid })); },
+  toggleSnap()    { set(s => ({ snapToGrid: !s.snapToGrid })); },
+  setGridSize(n)  { set({ gridSize: n }); },
+  setGridType(t)  { set({ gridType: t }); },
   openSceneSettings() { set({ showSceneSettingsModal: true }); },
   closeSceneSettings() { set({ showSceneSettingsModal: false }); },
   openProjectSettings() { set({ showProjectSettingsModal: true }); },
