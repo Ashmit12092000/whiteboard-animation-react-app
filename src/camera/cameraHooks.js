@@ -40,14 +40,18 @@ export function useCameraState() {
  */
 export function useCameraTransform(layerRef) {
   useEffect(() => {
+    let mounted = true;
     const unsub = cameraEngine.subscribe(state => {
-      if (layerRef.current) {
-        layerRef.current.style.transform       = cameraToTransform(state);
-        layerRef.current.style.transformOrigin = '0 0'; // math already handles pivot
-      }
+      // Guard: skip if unmounted or if ref has been detached
+      if (!mounted || !layerRef.current) return;
+      layerRef.current.style.transform       = cameraToTransform(state);
+      layerRef.current.style.transformOrigin = '0 0'; // math already handles pivot
     });
     cameraEngine.start();
-    return unsub;
+    return () => {
+      mounted = false;
+      unsub();
+    };
   }, [layerRef]);
 }
 

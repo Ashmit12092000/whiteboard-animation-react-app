@@ -104,7 +104,12 @@ export default function CameraViewfinder({
 
     const unsub = cameraEngine.subscribe(s => {
       if (!mounted) return;   // key guard: skip all DOM work after unmount
+
+      // Guard setCam behind mounted check — calling a state setter on an
+      // unmounted component can trigger React's reconciler to walk stale
+      // fiber trees and attempt removeChild on already-detached nodes.
       setCam({ ...s });
+
       // Also imperatively update the box position so it tracks instantly
       // (React batching can cause 1-frame lag during fast drag)
       const vp   = getViewportBounds(s);
@@ -114,6 +119,7 @@ export default function CameraViewfinder({
       const rT   = tl.y;
       const rW   = br.x - tl.x;
       const rH   = br.y - tl.y;
+      // Extra null-checks: refs are nulled in cleanup below
       if (boxRef.current) {
         boxRef.current.style.left   = `${rL}px`;
         boxRef.current.style.top    = `${rT}px`;
@@ -134,10 +140,17 @@ export default function CameraViewfinder({
         }
       }
     });
-    cameraEngine.start();
+    // Note: do NOT call cameraEngine.start() here — CameraLayer's useCameraTransform
+    // hook already owns the loop lifecycle. Calling start() again from here caused
+    // a second concurrent RAF tick which could fire _notify() during React teardown.
     return () => {
-      mounted = false;  // mark unmounted BEFORE unsubscribing so any in-flight RAF tick is a no-op
-      unsub();
+      mounted = false;  // mark unmounted FIRST — blocks any in-flight RAF subscriber callback
+      unsub();          // remove subscriber so future ticks skip this component entirely
+      // Null out all imperative refs so any tick that slips through the
+      // mounted guard cannot write to detached DOM nodes
+      boxRef.current  = null;
+      zoomRef.current = null;
+      svgRef.current  = null;
     };
   }, [maskId]);
 
