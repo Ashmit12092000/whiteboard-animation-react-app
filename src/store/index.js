@@ -155,6 +155,53 @@ export const useStore = create((set, get) => ({
     get().showToast('Project saved ✓');
   },
 
+  saveProjectAsJson() {
+    const { project } = get();
+    if (!project) return;
+    const saved = { ...project, modifiedOn: new Date().toISOString() };
+    const json = JSON.stringify(saved, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${saved.title.replace(/[^a-z0-9]/gi, '_')}.odp.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    get().showToast('Exported as JSON ✓');
+  },
+
+  loadProjectFromJson(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const project = JSON.parse(e.target.result);
+        if (!project.id || !project.scenes) throw new Error('Invalid project file');
+        // Merge into recentProjects (replace if same id, otherwise prepend)
+        const { recentProjects } = get();
+        const idx = recentProjects.findIndex(p => p.id === project.id);
+        let updated;
+        if (idx >= 0) { updated = [...recentProjects]; updated[idx] = project; }
+        else updated = [project, ...recentProjects];
+        persistProjects(updated);
+        cameraEngine.set({ ...CAMERA_IDENTITY });
+        set({
+          recentProjects: updated,
+          project: JSON.parse(JSON.stringify(project)),
+          selectedSceneId: project.scenes[0]?.id ?? null,
+          selectedGraphicId: null,
+          undoStack: [],
+          redoStack: [],
+          view: 'editor',
+        });
+        get().showToast('Project loaded ✓');
+      } catch {
+        get().showToast('Invalid project file ✗', 'error');
+      }
+    };
+    reader.readAsText(file);
+  },
+
   closeProject() {
     set({ view: 'launch', project: null, selectedSceneId: null, selectedGraphicId: null });
   },

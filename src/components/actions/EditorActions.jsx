@@ -5,17 +5,11 @@ import { useMobile } from '../../hooks/useMobile';
 
 export default function EditorActions() {
   const isMobile = useMobile();
-  const project           = useStore(s => s.project);
   const getSelectedScene  = useStore(s => s.getSelectedScene);
   const selectedGraphicId = useStore(s => s.selectedGraphicId);
   const deleteGraphic     = useStore(s => s.deleteGraphic);
   const moveGraphicInList = useStore(s => s.moveGraphicInList);
   const reorderGraphic    = useStore(s => s.reorderGraphic);
-  const saveProject       = useStore(s => s.saveProject);
-  const openPreviewModal  = useStore(s => s.openPreviewModal);
-  const closeProject      = useStore(s => s.closeProject);
-  const openProjectSettings = useStore(s => s.openProjectSettings);
-  const openSceneSettings   = useStore(s => s.openSceneSettings);
 
   const scene    = getSelectedScene();
   const graphics = scene?.graphics ?? [];
@@ -63,25 +57,6 @@ export default function EditorActions() {
       overflow: 'hidden',
       flexShrink: 0,
     }}>
-      {/* Header */}
-      <div style={{ padding: '12px 14px', borderBottom: '1px solid #1e293b', flexShrink: 0 }}>
-        <p style={{
-          fontSize: 10, fontWeight: 700, color: '#64748b',
-          letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10,
-        }}>Actions</p>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          <ActionBtn color="#10b981" onClick={saveProject} icon="💾">Save</ActionBtn>
-          <ActionBtn color="#3b82f6" onClick={openPreviewModal} icon="▶">Preview</ActionBtn>
-          <ActionBtn color="#ef4444" onClick={closeProject} icon="✕">Close</ActionBtn>
-        </div>
-
-        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-          <ActionBtn color="#8b5cf6" onClick={openSceneSettings} icon="🎬" small>Scene</ActionBtn>
-          <ActionBtn color="#f59e0b" onClick={openProjectSettings} icon="⚙" small>Project</ActionBtn>
-        </div>
-      </div>
-
       {/* Items list header */}
       <div style={{
         padding: '8px 14px 6px', borderBottom: '1px solid #1e293b',
@@ -128,28 +103,6 @@ export default function EditorActions() {
         )}
       </div>
     </div>
-  );
-}
-
-function ActionBtn({ color, onClick, icon, children, small }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        flex: small ? '1 1 60px' : '1 1 70px',
-        padding: small ? '5px 4px' : '6px 4px',
-        background: color + '20',
-        border: `1px solid ${color}50`,
-        borderRadius: 6, color,
-        fontSize: small ? 10 : 11, cursor: 'pointer', fontWeight: 700,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-        transition: 'background 0.15s',
-      }}
-      onMouseEnter={e => e.currentTarget.style.background = color + '40'}
-      onMouseLeave={e => e.currentTarget.style.background = color + '20'}
-    >
-      <span>{icon}</span> {children}
-    </button>
   );
 }
 

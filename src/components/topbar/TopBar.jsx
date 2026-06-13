@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useStore } from '../../store';
 import { useMobile } from '../../hooks/useMobile';
 import PixabayModal from '../dialogs/PixabayModal';
 
+// ── Generic dropdown menu ─────────────────────────────────────────────────────
 function MenuDropdown({ label, items }) {
   const [open, setOpen] = useState(false);
   return (
@@ -27,7 +28,7 @@ function MenuDropdown({ label, items }) {
           <div style={{
             position: 'absolute', top: '100%', left: 0, zIndex: 100,
             background: '#1e293b', border: '1px solid #334155',
-            borderRadius: 8, minWidth: 180, overflow: 'hidden',
+            borderRadius: 8, minWidth: 190, overflow: 'hidden',
             boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
             marginTop: 4,
           }}>
@@ -66,32 +67,198 @@ function MenuDropdown({ label, items }) {
   );
 }
 
+// ── Save button with dropdown ─────────────────────────────────────────────────
+function SaveDropdown({ onSave, onSaveJson }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: 'relative', display: 'flex' }}>
+      {/* Main save button */}
+      <button
+        onClick={() => { onSave(); }}
+        title="Save (Ctrl+S)"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '4px 10px',
+          background: '#052e16',
+          border: '1px solid #16a34a55',
+          borderRight: 'none',
+          borderRadius: '6px 0 0 6px',
+          color: '#4ade80', fontSize: 12, fontWeight: 700,
+          cursor: 'pointer', flexShrink: 0,
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = '#14532d'}
+        onMouseLeave={e => e.currentTarget.style.background = '#052e16'}
+      >
+        <span style={{ fontSize: 14 }}>💾</span>
+        Save
+      </button>
+      {/* Chevron/dropdown toggle */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        title="More save options"
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '4px 6px',
+          background: open ? '#14532d' : '#052e16',
+          border: '1px solid #16a34a55',
+          borderLeft: '1px solid #16a34a30',
+          borderRadius: '0 6px 6px 0',
+          color: '#4ade80', fontSize: 10,
+          cursor: 'pointer', flexShrink: 0,
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = '#14532d'}
+        onMouseLeave={e => !open && (e.currentTarget.style.background = '#052e16')}
+      >
+        ▾
+      </button>
+
+      {open && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 50 }} onClick={() => setOpen(false)} />
+          <div style={{
+            position: 'absolute', top: '100%', right: 0, zIndex: 100,
+            background: '#1e293b', border: '1px solid #334155',
+            borderRadius: 8, minWidth: 190, overflow: 'hidden',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            marginTop: 4,
+          }}>
+            <button
+              onClick={() => { onSave(); setOpen(false); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                width: '100%', padding: '9px 14px',
+                background: 'none', border: 'none', textAlign: 'left',
+                color: '#e2e8f0', fontSize: 13, cursor: 'pointer',
+                transition: 'background 0.1s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#334155')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <span style={{ width: 18, textAlign: 'center' }}>💾</span>
+              <span style={{ flex: 1 }}>Save</span>
+              <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>Ctrl+S</span>
+            </button>
+            <button
+              onClick={() => { onSaveJson(); setOpen(false); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                width: '100%', padding: '9px 14px',
+                background: 'none', border: 'none', textAlign: 'left',
+                color: '#e2e8f0', fontSize: 13, cursor: 'pointer',
+                transition: 'background 0.1s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#334155')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+            >
+              <span style={{ width: 18, textAlign: 'center' }}>📄</span>
+              <span style={{ flex: 1 }}>Save as JSON</span>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Load JSON button ──────────────────────────────────────────────────────────
+function LoadJsonButton({ onLoad }) {
+  const inputRef = useRef(null);
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".json"
+        style={{ display: 'none' }}
+        onChange={e => {
+          const file = e.target.files?.[0];
+          if (file) onLoad(file);
+          e.target.value = '';
+        }}
+      />
+      <button
+        onClick={() => inputRef.current?.click()}
+        title="Load project from JSON file"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '4px 10px',
+          background: '#0c1a2e',
+          border: '1px solid #2563eb55',
+          borderRadius: 6,
+          color: '#60a5fa', fontSize: 12, fontWeight: 700,
+          cursor: 'pointer', flexShrink: 0,
+          transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = '#1e3a5f'}
+        onMouseLeave={e => e.currentTarget.style.background = '#0c1a2e'}
+      >
+        <span style={{ fontSize: 14 }}>📂</span>
+        Load
+      </button>
+    </>
+  );
+}
+
+// ── Small action button used inline in the top bar ────────────────────────────
+function TopBarActionBtn({ color, onClick, icon, children, title }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 5,
+        padding: '4px 10px',
+        background: color + '18',
+        border: `1px solid ${color}50`,
+        borderRadius: 6, color,
+        fontSize: 12, cursor: 'pointer', fontWeight: 700,
+        flexShrink: 0,
+        transition: 'background 0.15s',
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = color + '38'}
+      onMouseLeave={e => e.currentTarget.style.background = color + '18'}
+    >
+      <span style={{ fontSize: 14 }}>{icon}</span>
+      {children}
+    </button>
+  );
+}
+
+// ── Main TopBar ───────────────────────────────────────────────────────────────
 export default function TopBar() {
   const isMobile = useMobile();
   const [pixabayOpen, setPixabayOpen] = useState(false);
-  const project = useStore(s => s.project);
-  const view = useStore(s => s.view);
-  const saveProject = useStore(s => s.saveProject);
-  const closeProject = useStore(s => s.closeProject);
-  const undo = useStore(s => s.undo);
-  const redo = useStore(s => s.redo);
-  const undoStack = useStore(s => s.undoStack);
-  const redoStack = useStore(s => s.redoStack);
-  const openPreviewModal = useStore(s => s.openPreviewModal);
-  const openProjectSettings = useStore(s => s.openProjectSettings);
-  const selectedGraphicId = useStore(s => s.selectedGraphicId);
-  const deleteGraphic = useStore(s => s.deleteGraphic);
+
+  const project               = useStore(s => s.project);
+  const view                  = useStore(s => s.view);
+  const saveProject           = useStore(s => s.saveProject);
+  const saveProjectAsJson     = useStore(s => s.saveProjectAsJson);
+  const loadProjectFromJson   = useStore(s => s.loadProjectFromJson);
+  const closeProject          = useStore(s => s.closeProject);
+  const openPreviewModal      = useStore(s => s.openPreviewModal);
+  const openProjectSettings   = useStore(s => s.openProjectSettings);
+  const openSceneSettings     = useStore(s => s.openSceneSettings);
+  const undo                  = useStore(s => s.undo);
+  const redo                  = useStore(s => s.redo);
+  const undoStack             = useStore(s => s.undoStack);
+  const redoStack             = useStore(s => s.redoStack);
+  const selectedGraphicId     = useStore(s => s.selectedGraphicId);
+  const deleteGraphic         = useStore(s => s.deleteGraphic);
 
   const menus = view === 'editor' ? [
     {
       label: 'File',
       items: [
         { icon: '💾', label: 'Save', shortcut: 'Ctrl+S', action: saveProject },
+        { icon: '📄', label: 'Save as JSON', action: saveProjectAsJson },
+        '---',
         { icon: '▶', label: 'Preview', action: openPreviewModal },
         '---',
         { icon: '⚙', label: 'Project Settings', action: openProjectSettings },
         '---',
-        { icon: '🏠', label: 'Back to Home', action: closeProject, danger: false },
+        { icon: '🏠', label: 'Back to Home', action: closeProject },
       ],
     },
     {
@@ -146,7 +313,7 @@ export default function TopBar() {
         <div style={{ width: 1, height: 20, background: '#1e293b', marginRight: 4 }} />
       )}
 
-      {/* Menu items */}
+      {/* Dropdown menus (File, Edit, Help) */}
       {menus.map(m => (
         <MenuDropdown key={m.label} label={m.label} items={m.items} />
       ))}
@@ -160,86 +327,118 @@ export default function TopBar() {
 
       {view === 'launch' && <div style={{ flex: 1 }} />}
 
-      {/* Animation button */}
+      {/* ── Right-side editor action buttons ─────────────────────────── */}
       {view === 'editor' && (
-        <a
-          href="https://testsites.testway.in/animate/"
-          target="_blank"
-          rel="noreferrer"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '4px 10px', background: '#1a2e1a',
-            border: '1px solid #16a34a55', borderRadius: 5,
-            color: '#4ade80', fontSize: 12, fontWeight: 700,
-            cursor: 'pointer', flexShrink: 0,
-            textDecoration: 'none',
-            transition: 'background 0.15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = '#14532d'}
-          onMouseLeave={e => e.currentTarget.style.background = '#1a2e1a'}
-        >
-          <span style={{ fontSize: 14 }}>🎬</span>
-          {!isMobile && 'Animation'}
-        </a>
-      )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
 
-      {/* Pixabay button */}
-      {view === 'editor' && (
-        <button
-          onClick={() => setPixabayOpen(true)}
-          title="Search Pixabay images"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '4px 10px', background: '#1e3a5f',
-            border: '1px solid #2563eb55', borderRadius: 5,
-            color: '#60a5fa', fontSize: 12, fontWeight: 700,
-            cursor: 'pointer', flexShrink: 0,
-            transition: 'background 0.15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = '#1e40af'}
-          onMouseLeave={e => e.currentTarget.style.background = '#1e3a5f'}
-        >
-          <img
-            src="/pixabay-icon.png"
-            alt="Pixabay"
+          {/* Move / Scene / Project buttons */}
+          {!isMobile && (
+            <>
+              <TopBarActionBtn
+                color="#8b5cf6"
+                icon="🎬"
+                onClick={openSceneSettings}
+                title="Scene settings"
+              >
+                Scene
+              </TopBarActionBtn>
+              <TopBarActionBtn
+                color="#f59e0b"
+                icon="⚙"
+                onClick={openProjectSettings}
+                title="Project settings"
+              >
+                Project
+              </TopBarActionBtn>
+            </>
+          )}
+
+          {/* Divider */}
+          <div style={{ width: 1, height: 20, background: '#334155' }} />
+
+          {/* Preview */}
+          <TopBarActionBtn
+            color="#3b82f6"
+            icon="▶"
+            onClick={openPreviewModal}
+            title="Preview animation"
+          >
+            {!isMobile && 'View'}
+          </TopBarActionBtn>
+
+          {/* Save dropdown (Save + Save as JSON) */}
+          <SaveDropdown onSave={saveProject} onSaveJson={saveProjectAsJson} />
+
+          {/* Load JSON */}
+          <LoadJsonButton onLoad={loadProjectFromJson} />
+
+          {/* Divider */}
+          <div style={{ width: 1, height: 20, background: '#334155' }} />
+
+          {/* Animation link */}
+          <a
+            href="https://testsites.testway.in/animate/"
+            target="_blank"
+            rel="noreferrer"
             style={{
-              width: 18,
-              height: 18,
-              objectFit: 'cover',
-              borderRadius: '50%',
-              border: '1px solid rgba(255,255,255,0.2)',
-              padding: 1,
-              background: '#fff',
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '4px 10px', background: '#1a2e1a',
+              border: '1px solid #16a34a55', borderRadius: 5,
+              color: '#4ade80', fontSize: 12, fontWeight: 700,
+              cursor: 'pointer', flexShrink: 0,
+              textDecoration: 'none',
+              transition: 'background 0.15s',
             }}
-          />
-          {!isMobile && 'Pixabay'}
-        </button>
-      )}
+            onMouseEnter={e => e.currentTarget.style.background = '#14532d'}
+            onMouseLeave={e => e.currentTarget.style.background = '#1a2e1a'}
+          >
+            <span style={{ fontSize: 14 }}>🎬</span>
+            {!isMobile && 'Animation'}
+          </a>
 
-      {/* Right: undo/redo when in editor */}
-      {view === 'editor' && (
-        <div style={{ display: 'flex', gap: 4 }}>
-          <IconBtn
-            title={`Undo (${undoStack.length})`}
-            disabled={undoStack.length === 0}
-            onClick={undo}
-          >↩</IconBtn>
-          <IconBtn
-            title={`Redo (${redoStack.length})`}
-            disabled={redoStack.length === 0}
-            onClick={redo}
-          >↪</IconBtn>
+          {/* Pixabay */}
+          <button
+            onClick={() => setPixabayOpen(true)}
+            title="Search Pixabay images"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '4px 10px', background: '#1e3a5f',
+              border: '1px solid #2563eb55', borderRadius: 5,
+              color: '#60a5fa', fontSize: 12, fontWeight: 700,
+              cursor: 'pointer', flexShrink: 0,
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#1e40af'}
+            onMouseLeave={e => e.currentTarget.style.background = '#1e3a5f'}
+          >
+            <img
+              src="/pixabay-icon.png"
+              alt="Pixabay"
+              style={{
+                width: 18, height: 18, objectFit: 'cover',
+                borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)',
+                padding: 1, background: '#fff',
+              }}
+            />
+            {!isMobile && 'Pixabay'}
+          </button>
+
+          {/* Undo / Redo */}
+          <div style={{ display: 'flex', gap: 4 }}>
+            <IconBtn title={`Undo (${undoStack.length})`} disabled={undoStack.length === 0} onClick={undo}>↩</IconBtn>
+            <IconBtn title={`Redo (${redoStack.length})`} disabled={redoStack.length === 0} onClick={redo}>↪</IconBtn>
+          </div>
+
+          {/* Board badge */}
+          {project && !isMobile && (
+            <span style={{
+              fontSize: 11, color: '#64748b', padding: '2px 8px',
+              background: '#1e293b', borderRadius: 4,
+            }}>
+              {project.boardType}
+            </span>
+          )}
         </div>
-      )}
-
-      {/* Board badge */}
-      {view === 'editor' && project && !isMobile && (
-        <span style={{
-          fontSize: 11, color: '#64748b', padding: '2px 8px',
-          background: '#1e293b', borderRadius: 4, marginLeft: 4,
-        }}>
-          {project.boardType}
-        </span>
       )}
     </div>
 
