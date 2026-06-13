@@ -214,15 +214,31 @@ export function fitAllObjects(objects) {
  */
 export function evaluateCameraKeyframes(keyframes, t) {
   if (!keyframes || keyframes.length === 0) return CAMERA_IDENTITY;
-  if (keyframes.length === 1) return keyframes[0];
 
-  // Find surrounding keyframes
-  const last = keyframes[keyframes.length - 1];
-  if (t >= last.startTime) return last;
+  // Single keyframe: animate FROM identity TO that keyframe's position.
+  // startTime is the arrival time; before it we interpolate from CAMERA_IDENTITY.
+  if (keyframes.length === 1) {
+    const kf = keyframes[0];
+    // If keyframe is at t=0 or we've passed it, just return it
+    if (kf.startTime <= 0 || t >= kf.startTime) return kf;
+    const segT = t / kf.startTime;
+    return lerpCamera(CAMERA_IDENTITY, kf, segT, kf.easing ?? 'cinematic');
+  }
 
   const first = keyframes[0];
-  if (t <= first.startTime) return first;
+  const last  = keyframes[keyframes.length - 1];
 
+  // Before the first keyframe: animate CAMERA_IDENTITY -> first keyframe
+  if (t <= first.startTime) {
+    if (first.startTime <= 0) return first;
+    const segT = t / first.startTime;
+    return lerpCamera(CAMERA_IDENTITY, first, segT, first.easing ?? 'cinematic');
+  }
+
+  // Past the last keyframe: hold
+  if (t >= last.startTime) return last;
+
+  // Between two adjacent keyframes
   for (let i = 0; i < keyframes.length - 1; i++) {
     const a = keyframes[i];
     const b = keyframes[i + 1];

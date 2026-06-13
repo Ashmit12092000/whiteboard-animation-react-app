@@ -154,23 +154,22 @@ export function useCameraPlayback(playing, keyframes, playStartRef) {
 
   useEffect(() => {
     if (playing && !wasPlayingRef.current) {
-      // Starting playback
       wasPlayingRef.current = true;
       if (keyframes && keyframes.length > 0) {
-        const playStartTime = playStartRef?.current ?? null;
-        const offsetS = playStartTime
-          ? (performance.now() - playStartTime) / 1000
-          : 0;
+        // Always start from t=0 — the playStartRef marks when play began,
+        // so we compute how far into the animation we already are.
+        // Use a tiny clamp to avoid negative offsets due to scheduling lag.
+        const playStartTime = playStartRef?.current ?? performance.now();
+        const offsetS = Math.max(0, (performance.now() - playStartTime) / 1000);
         cameraEngine.playKeyframes(keyframes, offsetS);
       } else {
-        // No keyframes — reset to identity so preview looks correct
+        // No keyframes — reset camera so preview starts from a clean state
         cameraEngine.set(CAMERA_IDENTITY);
       }
     } else if (!playing && wasPlayingRef.current) {
-      // Stopping playback
       wasPlayingRef.current = false;
       cameraEngine.stopKeyframes();
-      cameraEngine.animateTo(CAMERA_IDENTITY, 0.4, 'easeOut');
+      cameraEngine.set(CAMERA_IDENTITY);   // snap back instantly so next play starts fresh
     }
   }, [playing, keyframes, playStartRef]);
 }

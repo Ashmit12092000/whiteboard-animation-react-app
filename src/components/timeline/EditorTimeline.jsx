@@ -5,6 +5,8 @@ import CameraKeyframeEditor from '../../camera/CameraKeyframeEditor';
 import { getSceneDuration } from '../../utils/animation';
 import { useMobile } from '../../hooks/useMobile';
 import { cameraEngine } from '../../camera/cameraEngine';
+import { EASING_NAMES } from '../../camera/cameraUtils';
+import CameraEasingPreview from '../../camera/CameraEasingPreview';
 import VoiceRecorderModal from '../dialogs/VoiceRecorderModal';
 import TTSModal from '../dialogs/TTSModal';
 import TrimModal from '../dialogs/TrimModal';
@@ -371,6 +373,12 @@ export default function EditorTimeline() {
   const openCanvasPreview  = useStore(s => s.openCanvasPreview);
   const closeCanvasPreview = useStore(s => s.closeCanvasPreview);
 
+  // ── Selected camera keyframe (local — drives action bar easing picker) ───
+  const [selectedKfId, setSelectedKfId] = useState(null);
+
+  // Reset selected keyframe when scene changes
+  useEffect(() => { setSelectedKfId(null); }, [selectedSceneId]);
+
   // ── Voice recorder / TTS modals ──────────────────────────────────────────
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showTTSModal, setShowTTSModal] = useState(false);
@@ -562,15 +570,70 @@ export default function EditorTimeline() {
         </div>
 
         {/* ── Camera keyframe action bar ──────────────────────────────────── */}
-        {!isMobile && scene && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderBottom: '1px solid #1e293b', flexShrink: 0, background: '#080d16' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1 }}>📷 Camera</span>
-            <button onClick={() => setCameraKeyframeFromCurrentView(selectedSceneId, playheadTime)} title="Add camera keyframe at current playhead time" style={{ background: '#1a2236', border: '1px solid #f59e0b44', borderRadius: 4, color: '#f59e0b', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: '3px 8px', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 4, transition: 'background 0.1s, border-color 0.1s' }} onMouseEnter={e => { e.currentTarget.style.background = '#243048'; e.currentTarget.style.borderColor = '#f59e0b'; }} onMouseLeave={e => { e.currentTarget.style.background = '#1a2236'; e.currentTarget.style.borderColor = '#f59e0b44'; }}>
-              <svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><path d="M4.5 0L9 4.5L4.5 9L0 4.5Z"/></svg>
-              Add Keyframe
-            </button>
-          </div>
-        )}
+        {!isMobile && scene && (() => {
+          const selectedKf = cameraKeyframes.find(k => k.id === selectedKfId);
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px', borderBottom: '1px solid #1e293b', flexShrink: 0, background: '#080d16', minHeight: 32 }}>
+              {/* Label */}
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, flexShrink: 0 }}>📷 Camera</span>
+
+              {/* Add Keyframe button */}
+              <button
+                onClick={() => setCameraKeyframeFromCurrentView(selectedSceneId, playheadTime)}
+                title="Add camera keyframe at current playhead time"
+                style={{ background: '#1a2236', border: '1px solid #f59e0b44', borderRadius: 4, color: '#f59e0b', fontSize: 10, fontWeight: 700, cursor: 'pointer', padding: '3px 8px', lineHeight: 1, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, transition: 'background 0.1s, border-color 0.1s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#243048'; e.currentTarget.style.borderColor = '#f59e0b'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#1a2236'; e.currentTarget.style.borderColor = '#f59e0b44'; }}
+              >
+                <svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><path d="M4.5 0L9 4.5L4.5 9L0 4.5Z"/></svg>
+                Add Keyframe
+              </button>
+
+              {/* Divider */}
+              {selectedKf && <div style={{ width: 1, height: 18, background: '#1e293b', flexShrink: 0 }} />}
+
+              {/* Selected keyframe info + easing — only shown when a keyframe is selected */}
+              {selectedKf && (
+                <>
+                  <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>
+                    ⏱ <span style={{ color: '#fbbf24', fontWeight: 700 }}>{selectedKf.startTime.toFixed(2)}s</span>
+                  </span>
+                  <span style={{ fontSize: 10, color: '#64748b', flexShrink: 0 }}>
+                    zoom {selectedKf.zoom.toFixed(2)}×
+                  </span>
+                  <span style={{ fontSize: 10, color: '#64748b', flexShrink: 0 }}>
+                    pan ({Math.round(selectedKf.x)}, {Math.round(selectedKf.y)})
+                  </span>
+
+                  {/* Easing dropdown — live preview on hover/select */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, color: '#475569', fontWeight: 600 }}>Easing:</span>
+                    <CameraEasingPreview
+                      value={selectedKf.easing ?? 'cinematic'}
+                      onChange={name => updateCameraKeyframe(selectedSceneId, selectedKf.id, { easing: name })}
+                    />
+                  </div>
+
+                  {/* Deselect */}
+                  <button
+                    onClick={() => setSelectedKfId(null)}
+                    title="Deselect keyframe"
+                    style={{ marginLeft: 2, background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: '2px 4px', borderRadius: 3 }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#94a3b8'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#475569'; }}
+                  >✕</button>
+                </>
+              )}
+
+              {/* Hint when no keyframe selected but keyframes exist */}
+              {!selectedKf && cameraKeyframes.length > 0 && (
+                <span style={{ fontSize: 10, color: '#334155', fontStyle: 'italic' }}>
+                  Click a keyframe ◆ to set easing
+                </span>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── Track panel (desktop) ─────────────────────────────────────────── */}
         {!isMobile && scene && (
@@ -721,6 +784,11 @@ export default function EditorTimeline() {
                       onUpdate={updateCameraKeyframe}
                       onDelete={deleteCameraKeyframe}
                       onSelect={(kf) => setSelectedCameraKeyframeId(kf?.id ?? null)}
+                      selectedKeyframeId={selectedKfId}
+                      onSelectKeyframe={(id) => {
+                        setSelectedKfId(id);
+                        setSelectedCameraKeyframeId(id ?? null);
+                      }}
                     />
                   </div>
 
