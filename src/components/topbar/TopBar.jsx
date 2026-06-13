@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store';
 import { useMobile } from '../../hooks/useMobile';
+import PixabayModal from '../dialogs/PixabayModal';
 
 function MenuDropdown({ label, items }) {
   const [open, setOpen] = useState(false);
@@ -67,6 +68,7 @@ function MenuDropdown({ label, items }) {
 
 export default function TopBar() {
   const isMobile = useMobile();
+  const [pixabayOpen, setPixabayOpen] = useState(false);
   const project = useStore(s => s.project);
   const view = useStore(s => s.view);
   const saveProject = useStore(s => s.saveProject);
@@ -110,7 +112,11 @@ export default function TopBar() {
     },
   ] : [];
 
+  // On mobile, the editor provides its own compact top bar
+  if (isMobile && view === 'editor') return null;
+
   return (
+    <>
     <div style={{
       height: 46,
       background: '#0f172a',
@@ -154,6 +160,62 @@ export default function TopBar() {
 
       {view === 'launch' && <div style={{ flex: 1 }} />}
 
+      {/* Animation button */}
+      {view === 'editor' && (
+        <a
+          href="https://testsites.testway.in/animate/"
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '4px 10px', background: '#1a2e1a',
+            border: '1px solid #16a34a55', borderRadius: 5,
+            color: '#4ade80', fontSize: 12, fontWeight: 700,
+            cursor: 'pointer', flexShrink: 0,
+            textDecoration: 'none',
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = '#14532d'}
+          onMouseLeave={e => e.currentTarget.style.background = '#1a2e1a'}
+        >
+          <span style={{ fontSize: 14 }}>🎬</span>
+          {!isMobile && 'Animation'}
+        </a>
+      )}
+
+      {/* Pixabay button */}
+      {view === 'editor' && (
+        <button
+          onClick={() => setPixabayOpen(true)}
+          title="Search Pixabay images"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '4px 10px', background: '#1e3a5f',
+            border: '1px solid #2563eb55', borderRadius: 5,
+            color: '#60a5fa', fontSize: 12, fontWeight: 700,
+            cursor: 'pointer', flexShrink: 0,
+            transition: 'background 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = '#1e40af'}
+          onMouseLeave={e => e.currentTarget.style.background = '#1e3a5f'}
+        >
+          <img
+            src="/pixabay-icon.png"
+            alt="Pixabay"
+            style={{
+              width: 18,
+              height: 18,
+              objectFit: 'cover',
+              borderRadius: '50%',
+              border: '1px solid rgba(255,255,255,0.2)',
+              padding: 1,
+              background: '#fff',
+            }}
+          />
+          {!isMobile && 'Pixabay'}
+        </button>
+      )}
+
       {/* Right: undo/redo when in editor */}
       {view === 'editor' && (
         <div style={{ display: 'flex', gap: 4 }}>
@@ -180,6 +242,9 @@ export default function TopBar() {
         </span>
       )}
     </div>
+
+    {pixabayOpen && <PixabayModal onClose={() => setPixabayOpen(false)} />}
+    </>
   );
 }
 

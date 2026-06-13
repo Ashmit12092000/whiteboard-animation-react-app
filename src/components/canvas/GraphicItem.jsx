@@ -6,6 +6,7 @@ import AnimatedTextReveal from '../shared/AnimatedTextReveal';
 import AnimatedImageReveal from '../shared/AnimatedImageReveal';
 import ContextMenu, { getEntryEffectStyle, ENTRY_EFFECTS } from './ContextMenu';
 import { useStore } from '../../store';
+import { useMobile } from '../../hooks/useMobile';
 
 // Eight resize handle positions
 const HANDLES = [
@@ -20,6 +21,7 @@ const HANDLES = [
 ];
 
 export default function GraphicItem({ graphic, isSelected, playing, onTipMove, seqDelay, playStartTime, snap }) {
+  const isMobile      = useMobile();
   const moveGraphic   = useStore(s => s.moveGraphic);
   const resizeGraphic = useStore(s => s.resizeGraphic);
   const rotateGraphic = useStore(s => s.rotateGraphic);
@@ -265,23 +267,31 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
         {/* ── Selection handles ── */}
         {isSelected && !playing && (
           <>
-            {/* Rotate handle */}
-            <div onMouseDown={handleRotateDown} title="Rotate"
+            {/* Rotate handle — bigger on mobile for finger tapping */}
+            <div
+              onMouseDown={handleRotateDown}
+              title="Rotate"
               style={{
-                position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)',
-                width: 20, height: 20, background: '#8b5cf6', border: '2px solid #fff',
+                position: 'absolute',
+                top: isMobile ? -44 : -32,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: isMobile ? 32 : 20,
+                height: isMobile ? 32 : 20,
+                background: '#8b5cf6', border: '2px solid #fff',
                 borderRadius: '50%', cursor: 'grab', zIndex: 10,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                touchAction: 'none',
               }}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width={isMobile ? 15 : 11} height={isMobile ? 15 : 11} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21.5 2v6h-6"/>
                 <path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/>
               </svg>
             </div>
-            <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', width: 1, height: 12, background: '#3b82f6', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: isMobile ? -14 : -12, left: '50%', transform: 'translateX(-50%)', width: 1, height: isMobile ? 14 : 12, background: '#3b82f6', pointerEvents: 'none' }} />
 
-            {/* 8 resize handles */}
-            {HANDLES.map(h => (
+            {/* 8 resize handles — desktop only (mobile uses pinch-to-resize) */}
+            {!isMobile && HANDLES.map(h => (
               <div key={h.id} onMouseDown={handleResizeDown(h.id)}
                 style={{
                   position: 'absolute',
@@ -293,21 +303,32 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
                 }} />
             ))}
 
+            {/* Mobile: pinch hint badge */}
+            {isMobile && (
+              <div style={{
+                position: 'absolute', bottom: -26, left: '50%', transform: 'translateX(-50%)',
+                background: 'rgba(59,130,246,0.85)', color: '#fff',
+                fontSize: 9, padding: '2px 7px', borderRadius: 10,
+                whiteSpace: 'nowrap', pointerEvents: 'none',
+                fontFamily: 'system-ui', fontWeight: 600, letterSpacing: 0.3,
+              }}>pinch to resize</div>
+            )}
+
             {/* Label + effect badge */}
             <div style={{
-              position: 'absolute', top: -22, left: 0,
+              position: 'absolute', top: isMobile ? -20 : -22, left: 0,
               display: 'flex', alignItems: 'center', gap: 4,
             }}>
               <div style={{
                 background: '#3b82f6', color: '#fff',
-                fontSize: 10, padding: '2px 6px', borderRadius: 4,
+                fontSize: isMobile ? 9 : 10, padding: '2px 6px', borderRadius: 4,
                 whiteSpace: 'nowrap', pointerEvents: 'none',
                 fontFamily: 'system-ui', fontWeight: 600,
               }}>{graphic.name}</div>
               {entryEffect !== 'none' && (
                 <div style={{
                   background: '#7c3aed', color: '#fff',
-                  fontSize: 10, padding: '2px 5px', borderRadius: 4,
+                  fontSize: isMobile ? 9 : 10, padding: '2px 5px', borderRadius: 4,
                   whiteSpace: 'nowrap', pointerEvents: 'none',
                   fontFamily: 'system-ui', fontWeight: 600,
                 }}>

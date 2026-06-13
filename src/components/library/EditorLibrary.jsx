@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import GraphicsTab from './GraphicsTab';
 import ShapesTab from './ShapesTab';
 import TextTab from './TextTab';
@@ -18,9 +18,18 @@ const TABS = [
   { id: 'audio',    label: 'Audio',    icon: '♪' },
 ];
 
-export default function EditorLibrary() {
+export default function EditorLibrary({ initialTab }) {
   const isMobile = useMobile();
-  const [activeTab, setActiveTab] = useState('graphics');
+  const [activeTab, setActiveTab] = useState(initialTab ?? 'graphics');
+
+  // When parent changes which tool opened us, jump to that tab
+  const prevInitialTab = useRef(initialTab);
+  useEffect(() => {
+    if (initialTab && initialTab !== prevInitialTab.current) {
+      setActiveTab(initialTab);
+      prevInitialTab.current = initialTab;
+    }
+  }, [initialTab]);
 
   return (
     <div style={{

@@ -7,6 +7,7 @@ import { useMobile } from '../../hooks/useMobile';
 import { cameraEngine } from '../../camera/cameraEngine';
 import VoiceRecorderModal from '../dialogs/VoiceRecorderModal';
 import TTSModal from '../dialogs/TTSModal';
+import TrimModal from '../dialogs/TrimModal';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LABEL_W   = 130;
@@ -107,7 +108,7 @@ function CtxMenu({ x, y, items, onClose }) {
 }
 
 // ─── Graphic track context menu ───────────────────────────────────────────────
-function TrackContextMenu({ x, y, graphic, scene, onClose }) {
+function TrackContextMenu({ x, y, graphic, scene, onClose, onTrim }) {
   const duplicateGraphic   = useStore(s => s.duplicateGraphic);
   const splitGraphic       = useStore(s => s.splitGraphic);
   const deleteGraphic      = useStore(s => s.deleteGraphic);
@@ -153,8 +154,9 @@ function TrackContextMenu({ x, y, graphic, scene, onClose }) {
     { label: 'Move Earlier', icon: '↑', disabled: isFirst, action: () => { moveGraphicInList(graphic.id, -1); onClose(); } },
     { label: 'Move Later',   icon: '↓', disabled: isLast,  action: () => { moveGraphicInList(graphic.id,  1); onClose(); } },
     { sep: true },
-    { label: 'Duplicate',    icon: '⧉', action: () => { duplicateGraphic(graphic.id); onClose(); } },
+    { label: 'Duplicate',         icon: '⧉', action: () => { duplicateGraphic(graphic.id); onClose(); } },
     { label: 'Split at midpoint', icon: '✂', disabled: !canSplit, action: () => { if (!canSplit) return; splitGraphic(graphic.id); onClose(); } },
+    { label: 'Trim…',             icon: '⬌', action: () => { onTrim?.(graphic); onClose(); } },
     ...typeItems,
     { sep: true },
     { label: 'Delete', icon: '🗑', danger: true, action: () => { deleteGraphic(graphic.id); onClose(); } },
@@ -214,9 +216,10 @@ function CameraTrackContextMenu({ x, y, sceneId, keyframes, onClose }) {
 
   return <CtxMenu x={x} y={y} items={items} onClose={onClose} />;
 }
-function TrackBar({ graphic, startX, width, pxPerS, isSelected, onSelect, onContextMenu, onDurationChange }) {
+function TrackBar({ graphic, startX, width, delayW, pxPerS, isSelected, onSelect, onContextMenu, onDurationChange }) {
   const colors  = TYPE_COLOR[graphic.type] ?? TYPE_COLOR.drawing;
   const [hovered, setHovered] = useState(false);
+  const hasDelay = delayW > 2;
 
   const onRightEdgeDown = useCallback((e) => {
     e.stopPropagation(); e.preventDefault();
@@ -230,28 +233,46 @@ function TrackBar({ graphic, startX, width, pxPerS, isSelected, onSelect, onCont
     window.addEventListener('mouseup', onUp);
   }, [graphic.duration, pxPerS, onDurationChange]);
 
+  const totalW = Math.max(6, (hasDelay ? delayW : 0) + width);
+
   return (
     <div
       style={{
-        position: 'absolute', left: startX, width: Math.max(6, width),
+        position: 'absolute', left: startX, width: totalW,
         top: 4, height: TRACK_H - 8, borderRadius: 4,
-        background: isSelected ? colors.hover : hovered ? colors.hover : colors.bar,
-        border: `1.5px solid ${isSelected ? '#fff' : 'rgba(255,255,255,0.18)'}`,
         boxSizing: 'border-box', cursor: 'pointer', overflow: 'hidden',
-        display: 'flex', alignItems: 'center', transition: 'background 0.1s',
+        display: 'flex', alignItems: 'stretch',
+        border: `1.5px solid ${isSelected ? '#fff' : 'rgba(255,255,255,0.18)'}`,
         boxShadow: isSelected ? '0 0 0 2px rgba(255,255,255,0.25)' : undefined,
         userSelect: 'none',
+        transition: 'border-color 0.1s',
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={(e) => { e.stopPropagation(); onSelect?.(); }}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(e); }}
     >
-      <span style={{ position: 'absolute', left: 10, right: 10, fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.92)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', pointerEvents: 'none' }}>
-        {graphic.name || graphic.rawText || graphic.type}
-      </span>
-      <div onMouseDown={onRightEdgeDown} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 6, cursor: 'ew-resize', background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
-        <div style={{ width: 1, height: 10, background: 'rgba(255,255,255,0.6)', borderRadius: 1 }} />
+      {/* Delay (trim-start) region */}
+      {hasDelay && (
+        <div style={{
+          width: delayW, flexShrink: 0, height: '100%',
+          background: 'repeating-linear-gradient(-45deg, rgba(0,0,0,0.4), rgba(0,0,0,0.4) 3px, rgba(255,255,255,0.04) 3px, rgba(255,255,255,0.04) 6px)',
+          borderRight: `1px solid ${colors.dim}`,
+        }} />
+      )}
+      {/* Active region */}
+      <div style={{
+        flex: 1, height: '100%', position: 'relative',
+        background: isSelected ? colors.hover : hovered ? colors.hover : colors.bar,
+        transition: 'background 0.1s',
+        display: 'flex', alignItems: 'center',
+      }}>
+        <span style={{ position: 'absolute', left: 8, right: 10, fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.92)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', pointerEvents: 'none' }}>
+          {graphic.name || graphic.rawText || graphic.type}
+        </span>
+        <div onMouseDown={onRightEdgeDown} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 6, cursor: 'ew-resize', background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+          <div style={{ width: 1, height: 10, background: 'rgba(255,255,255,0.6)', borderRadius: 1 }} />
+        </div>
       </div>
     </div>
   );
@@ -354,6 +375,9 @@ export default function EditorTimeline() {
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showTTSModal, setShowTTSModal] = useState(false);
   const [audioCtxMenu, setAudioCtxMenu] = useState(null);
+
+  // ── Trim modal ────────────────────────────────────────────────────────────
+  const [trimGraphic, setTrimGraphic] = useState(null);
 
   const scene           = project?.scenes.find(s => s.id === selectedSceneId);
   const cameraKeyframes = getCameraKeyframes(selectedSceneId);
@@ -458,6 +482,7 @@ export default function EditorTimeline() {
   }, [pxPerS, totalDurationS]);
 
   const handleScrubStart = useCallback((e) => {
+    if (e.button !== 0) return; // ignore right-clicks
     if (isPlaying) {
       // Pause playback while scrubbing
       pauseTimeRef.current = playheadTime;
@@ -501,9 +526,10 @@ export default function EditorTimeline() {
   // ── Sequential track data ─────────────────────────────────────────────────
   let cursor = 0;
   const tracksWithTime = (scene?.graphics ?? []).map(g => {
-    const startS = cursor;
-    cursor += g.duration;
-    return { graphic: g, startS };
+    const delayS = g.delay ?? 0;
+    const startS = cursor;           // slot start (includes leading delay)
+    cursor += delayS + g.duration;   // next track starts after delay + active duration
+    return { graphic: g, startS, delayS };
   });
 
   const playheadX = playheadTime * pxPerS;
@@ -648,6 +674,7 @@ export default function EditorTimeline() {
               <div
                 ref={scrollRef}
                 onMouseDown={handleScrubStart}
+                onContextMenu={(e) => e.preventDefault()}
                 style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', position: 'relative', cursor: 'crosshair' }}
               >
                 {/* Inner container — sized to full timeline width */}
@@ -659,17 +686,19 @@ export default function EditorTimeline() {
                     </div>
                   )}
 
-                  {tracksWithTime.map(({ graphic, startS }, rowIdx) => {
+                  {tracksWithTime.map(({ graphic, startS, delayS }, rowIdx) => {
                     const isSelected = selectedGraphicId === graphic.id;
                     const barLeft    = startS * pxPerS;
                     const barWidth   = graphic.duration * pxPerS;
+                    const delayW     = delayS * pxPerS;
                     return (
-                      <div key={graphic.id} style={{ height: TRACK_H, position: 'relative', background: rowIdx % 2 === 0 ? '#0a0f1a' : '#080d16', borderBottom: '1px solid #111827' }} onClick={() => selectGraphic(graphic.id)}>
+                      <div key={graphic.id} style={{ height: TRACK_H, position: 'relative', background: rowIdx % 2 === 0 ? '#0a0f1a' : '#080d16', borderBottom: '1px solid #111827' }} onClick={() => selectGraphic(graphic.id)} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setCtxMenu({ x: e.clientX, y: e.clientY, graphic }); }}>
                         <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.02)', pointerEvents: 'none' }} />
                         <TrackBar
                           graphic={graphic}
                           startX={barLeft}
                           width={barWidth}
+                          delayW={delayW}
                           pxPerS={pxPerS}
                           isSelected={isSelected}
                           onSelect={() => selectGraphic(graphic.id)}
@@ -745,6 +774,7 @@ export default function EditorTimeline() {
             graphic={ctxMenu.graphic}
             scene={scene}
             onClose={() => setCtxMenu(null)}
+            onTrim={(g) => { setTrimGraphic(g); setCtxMenu(null); }}
           />
         )}
 
@@ -778,6 +808,14 @@ export default function EditorTimeline() {
       {/* TTS modal */}
       {showTTSModal && (
         <TTSModal onClose={() => setShowTTSModal(false)} />
+      )}
+
+      {/* Trim modal */}
+      {trimGraphic && (
+        <TrimModal
+          graphic={trimGraphic}
+          onClose={() => setTrimGraphic(null)}
+        />
       )}
     </>
   );
