@@ -21,6 +21,7 @@ const scaleY = y => (y / WORLD_H) * MINI_H;
 
 export default function CameraMiniMap({ graphics = [], visible = true }) {
   const [viewport, setViewport] = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -48,13 +49,41 @@ export default function CameraMiniMap({ graphics = [], visible = true }) {
     }, 0.4, 'easeOut');
   };
 
+  if (collapsed) {
+    return (
+      <button
+        onClick={() => setCollapsed(false)}
+        title="Show overview map"
+        style={{
+          position:     'absolute',
+          bottom:       12,
+          left:         12,
+          width:        30,
+          height:       30,
+          display:      'flex',
+          alignItems:   'center',
+          justifyContent: 'center',
+          background:   'rgba(15,23,42,0.88)',
+          border:       '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 6,
+          color:        '#e2e8f0',
+          cursor:       'pointer',
+          zIndex:       25,
+          backdropFilter: 'blur(6px)',
+          padding:      0,
+        }}
+      >
+        <EyeIcon />
+      </button>
+    );
+  }
+
   return (
     <div
-      onClick={handleClick}
       title="Mini-map — click to pan"
       style={{
         position:     'absolute',
-        bottom:       50,
+        bottom:       12,
         left:         12,
         width:        MINI_W,
         height:       MINI_H,
@@ -66,8 +95,25 @@ export default function CameraMiniMap({ graphics = [], visible = true }) {
         zIndex:       25,
         backdropFilter: 'blur(6px)',
       }}
+      onClick={handleClick}
     >
-      {/* Object dots */}
+      {/* Hide toggle */}
+      <button
+        onClick={(e) => { e.stopPropagation(); setCollapsed(true); }}
+        title="Hide overview map"
+        style={{
+          position: 'absolute', top: 2, right: 2,
+          width: 16, height: 16, display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(15,23,42,0.7)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: 3, color: '#94a3b8',
+          cursor: 'pointer', padding: 0, zIndex: 2,
+        }}
+      >
+        <CloseIcon />
+      </button>
+
       {graphics.map(g => (
         <div
           key={g.id}
@@ -109,5 +155,22 @@ export default function CameraMiniMap({ graphics = [], visible = true }) {
         OVERVIEW
       </div>
     </div>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
+    </svg>
   );
 }

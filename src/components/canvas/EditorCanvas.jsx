@@ -147,14 +147,19 @@ export default function EditorCanvas({ playing = false }) {
         position:     'relative',
         width:        CANVAS_W,
         height:       CANVAS_H,
-        borderRadius: 6,
-        overflow:     'hidden',
-        boxShadow:    '0 8px 40px rgba(0,0,0,0.35)',
         flexShrink:   0,
         cursor:       cameraEditMode ? 'crosshair' : 'default',
       }}
       onMouseDown={handleMouseDown}
     >
+      {/* Clipped viewport — board, world content, and viewfinder live here */}
+      <div style={{
+        position:     'absolute',
+        inset:        0,
+        borderRadius: 6,
+        overflow:     'hidden',
+        boxShadow:    '0 8px 40px rgba(0,0,0,0.35)',
+      }}>
       {/* Board background — outside CameraLayer so it doesn't zoom */}
       <div style={{ position: 'absolute', inset: 0, ...boardStyle, zIndex: 0 }} />
 
@@ -242,7 +247,25 @@ export default function EditorCanvas({ playing = false }) {
         )}
       </CameraLayer>
 
-      {/* ── Screen-space HUD overlays ────────────────────────────────────── */}
+      {/* ── VideoScribe-style camera viewfinder ─────────────────────────── */}
+      {cameraEditMode && !playing && (
+        <CameraViewfinder
+          outerRef={outerRef}
+          playheadTime={playheadTime}
+          selectedSceneId={selectedSceneId}
+          selectedKeyframe={selectedKeyframe}
+          onAddKeyframe={(t) => setCameraKeyframeFromCurrentView(selectedSceneId, t)}
+          onExit={() => setCameraEditMode(false)}
+        />
+      )}
+
+      <CameraMiniMap
+        graphics={scene?.graphics ?? []}
+        visible={!playing}
+      />
+      </div>
+
+      {/* ── Right-side HUD overlays ────────────────────────────────────── */}
       <CameraControls
         graphics={scene?.graphics ?? []}
         selectedSceneId={selectedSceneId}
@@ -259,23 +282,6 @@ export default function EditorCanvas({ playing = false }) {
         onSetGridSize={useStore(s => s.setGridSize)}
         onSetGridType={useStore(s => s.setGridType)}
       />
-
-      <CameraMiniMap
-        graphics={scene?.graphics ?? []}
-        visible={!playing}
-      />
-
-      {/* ── VideoScribe-style camera viewfinder ─────────────────────────── */}
-      {cameraEditMode && !playing && (
-        <CameraViewfinder
-          outerRef={outerRef}
-          playheadTime={playheadTime}
-          selectedSceneId={selectedSceneId}
-          selectedKeyframe={selectedKeyframe}
-          onAddKeyframe={(t) => setCameraKeyframeFromCurrentView(selectedSceneId, t)}
-          onExit={() => setCameraEditMode(false)}
-        />
-      )}
     </div>
   );
 }

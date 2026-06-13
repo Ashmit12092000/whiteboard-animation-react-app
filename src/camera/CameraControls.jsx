@@ -94,7 +94,7 @@ function GridSettingsPopover({ gridSize, gridType, onSetGridSize, onSetGridType,
       ref={ref}
       style={{
         position:      'absolute',
-        bottom:        36,
+        top:           36,
         right:         0,
         width:         182,
         background:    'rgba(13,21,38,0.97)',
@@ -171,10 +171,11 @@ export default function CameraControls({
   return (
     <div style={{
       position:   'absolute',
-      bottom:     12,
-      right:      12,
+      top:        '100%',
+      marginTop:  10,
+      right:      0,
       display:    'flex',
-      flexDirection: 'column',
+      flexDirection: 'row',
       gap:        6,
       zIndex:     30,
       pointerEvents: 'none',

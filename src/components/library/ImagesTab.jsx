@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useStore } from '../../store';
+import ImageEditModal from '../dialogs/ImageEditModal';
 
 const REVEAL_EFFECTS = [
   { value: 'wipe-right', label: '→ Wipe Right' },
@@ -13,9 +14,9 @@ export default function ImagesTab() {
   const fileRef         = useRef(null);
   const addImageGraphic = useStore(s => s.addImageGraphic);
 
-  const [pending, setPending]   = useState([]); // [{ id, name, src, w, h }]
-  const [effect,  setEffect]    = useState('wipe-right');
-  const [loading, setLoading]   = useState(false);
+  const [effect,    setEffect]    = useState('wipe-right');
+  const [editQueue, setEditQueue] = useState([]); // items waiting for modal
+  const [loading,   setLoading]   = useState(false);
 
   const handleFiles = async (files) => {
     setLoading(true);
@@ -24,38 +25,27 @@ export default function ImagesTab() {
       if (!file.type.startsWith('image/')) continue;
       const src = await readAsDataURL(file);
       const { w, h } = await getImageDimensions(src);
-      results.push({
-        id: crypto.randomUUID(),
-        name: file.name.replace(/\.[^.]+$/, ''),
-        src, w, h,
-      });
+      results.push({ id: crypto.randomUUID(), name: file.name.replace(/\.[^.]+$/, ''), src, w, h });
     }
-    setPending(prev => [...prev, ...results]);
     setLoading(false);
+    if (results.length > 0) setEditQueue(prev => [...prev, ...results]);
   };
 
-  const handleFileInput = (e) => {
-    handleFiles(Array.from(e.target.files));
-    e.target.value = '';
+  const handleFileInput = (e) => { handleFiles(Array.from(e.target.files)); e.target.value = ''; };
+  const handleDrop      = (e)  => { e.preventDefault(); handleFiles(Array.from(e.dataTransfer.files)); };
+
+  const currentEdit = editQueue[0] ?? null;
+
+  const handleConfirm = (editedItem) => {
+    const maxW   = 280;
+    const aspect = editedItem.h / editedItem.w;
+    const w      = Math.min(editedItem.w, maxW);
+    const h      = Math.round(w * aspect);
+    addImageGraphic({ src: editedItem.src, name: editedItem.name, width: w, height: h, revealEffect: effect });
+    setEditQueue(prev => prev.slice(1));
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    handleFiles(Array.from(e.dataTransfer.files));
-  };
-
-  const addToCanvas = (item) => {
-    // Keep aspect ratio, cap at 280px wide
-    const maxW = 280;
-    const aspect = item.h / item.w;
-    const w = Math.min(item.w, maxW);
-    const h = Math.round(w * aspect);
-    addImageGraphic({ src: item.src, name: item.name, width: w, height: h, revealEffect: effect });
-  };
-
-  const removeFromPending = (id) => {
-    setPending(prev => prev.filter(p => p.id !== id));
-  };
+  const handleCancel = () => setEditQueue(prev => prev.slice(1));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
@@ -71,19 +61,13 @@ export default function ImagesTab() {
               key={e.value}
               onClick={() => setEffect(e.value)}
               style={{
-                flex: '1 1 auto',
-                padding: '5px 6px',
-                fontSize: 10, fontWeight: 600,
+                flex: '1 1 auto', padding: '5px 6px', fontSize: 10, fontWeight: 600,
                 background: effect === e.value ? '#3b82f620' : '#1e293b',
                 border: `1px solid ${effect === e.value ? '#3b82f6' : '#334155'}`,
-                borderRadius: 5,
-                color: effect === e.value ? '#3b82f6' : '#94a3b8',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
+                borderRadius: 5, color: effect === e.value ? '#3b82f6' : '#94a3b8',
+                cursor: 'pointer', whiteSpace: 'nowrap',
               }}
-            >
-              {e.label}
-            </button>
+            >{e.label}</button>
           ))}
         </div>
       </div>
@@ -97,130 +81,45 @@ export default function ImagesTab() {
           margin: '10px 12px 0',
           border: '2px dashed #334155',
           borderRadius: 8,
-          padding: '18px 12px',
+          padding: '22px 12px',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-          cursor: 'pointer',
-          flexShrink: 0,
-          transition: 'border-color 0.15s',
+          cursor: 'pointer', flexShrink: 0, transition: 'border-color 0.15s',
         }}
         onMouseEnter={e => e.currentTarget.style.borderColor = '#3b82f6'}
         onMouseLeave={e => e.currentTarget.style.borderColor = '#334155'}
       >
-        <div style={{ fontSize: 24 }}>🖼️</div>
+        <div style={{ fontSize: 26 }}>🖼️</div>
         <p style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', margin: 0 }}>
           {loading ? 'Loading…' : 'Click or drag images here'}
         </p>
-        <p style={{ fontSize: 10, color: '#4b5563', margin: 0 }}>
-          PNG, JPG, GIF, WebP, SVG
+        <p style={{ fontSize: 10, color: '#4b5563', margin: 0 }}>PNG · JPG · GIF · WebP · SVG</p>
+        <p style={{ fontSize: 10, color: '#3b82f670', margin: 0, fontStyle: 'italic' }}>
+          Opens crop &amp; filter editor
         </p>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleFileInput}
-        />
+        <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFileInput} />
       </div>
 
-      {/* Uploaded image list */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px 10px 80px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {pending.length === 0 && (
-          <p style={{ color: '#374151', fontSize: 12, textAlign: 'center', marginTop: 20 }}>
-            No images uploaded yet
-          </p>
-        )}
-        {pending.map(item => (
-          <ImageCard
-            key={item.id}
-            item={item}
-            onAdd={() => addToCanvas(item)}
-            onRemove={() => removeFromPending(item.id)}
-          />
-        ))}
+      {/* Empty state */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#1e293b', fontSize: 12, textAlign: 'center', padding: '0 16px' }}>
+          Upload an image to crop, filter, and add it to the canvas
+        </p>
       </div>
+
+      {/* Edit modal (shown when queue has items) */}
+      {currentEdit && (
+        <ImageEditModal
+          item={currentEdit}
+          revealEffect={effect}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+        />
+      )}
     </div>
   );
 }
 
-function ImageCard({ item, onAdd, onRemove }) {
-  return (
-    <div style={{
-      background: '#1e293b',
-      border: '1px solid #334155',
-      borderRadius: 8,
-      padding: 8,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      transition: 'border-color 0.15s',
-    }}
-      onMouseEnter={e => e.currentTarget.style.borderColor = '#475569'}
-      onMouseLeave={e => e.currentTarget.style.borderColor = '#334155'}
-    >
-      {/* Thumbnail */}
-      <div style={{
-        width: 44, height: 44, flexShrink: 0,
-        background: '#0f172a', borderRadius: 5,
-        overflow: 'hidden', display: 'flex',
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        <img
-          src={item.src}
-          alt={item.name}
-          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}
-        />
-      </div>
-
-      {/* Name + dimensions */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <div style={{
-          fontSize: 11, color: '#e2e8f0', fontWeight: 600,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          {item.name}
-        </div>
-        <div style={{ fontSize: 10, color: '#64748b' }}>
-          {item.w} × {item.h}
-        </div>
-      </div>
-
-      {/* Add */}
-      <button
-        onClick={onAdd}
-        title="Add to canvas"
-        style={{
-          padding: '5px 8px', fontSize: 11, fontWeight: 700,
-          background: '#3b82f620', border: '1px solid #3b82f650',
-          borderRadius: 5, color: '#3b82f6', cursor: 'pointer',
-          flexShrink: 0,
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = '#3b82f640'}
-        onMouseLeave={e => e.currentTarget.style.background = '#3b82f620'}
-      >
-        + Add
-      </button>
-
-      {/* Remove */}
-      <button
-        onClick={onRemove}
-        title="Remove"
-        style={{
-          padding: '5px 7px', fontSize: 11,
-          background: '#ef444420', border: '1px solid #ef444440',
-          borderRadius: 5, color: '#ef4444', cursor: 'pointer',
-          flexShrink: 0,
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = '#ef444440'}
-        onMouseLeave={e => e.currentTarget.style.background = '#ef444420'}
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function readAsDataURL(file) {
   return new Promise((resolve, reject) => {
