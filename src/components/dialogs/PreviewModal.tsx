@@ -7,7 +7,7 @@ import AnimatedTextReveal from '../shared/AnimatedTextReveal';
 import AnimatedImageReveal from '../shared/AnimatedImageReveal';
 import AnimatedFillReveal from '../shared/AnimatedFillReveal';
 import WhiteboardHand from '../shared/WhiteboardHand';
-import { getBoardStyle, getTransitionStyle } from '../../utils/animation';
+import { getBoardStyle, getTransitionStyle, getCanvasSize } from '../../utils/animation';
 import { getEffectiveFontFamily } from '../../services/fontService';
 import { useMobile } from '../../hooks/useMobile';
 import { getEntryEffectStyle } from '../canvas/ContextMenu';
@@ -227,6 +227,7 @@ export default function PreviewModal() {
   }, [audioMuted, stopAllAudio]);
 
   const boardStyle = getBoardStyle(project?.boardType ?? 'whiteboard');
+  const { w: NATIVE_W, h: NATIVE_H } = getCanvasSize(project?.canvasSizeKey);
   const timeline   = scene ? buildSequentialTimeline(scene.graphics, speed) : [];
   const transitionStyle = playing && scene ? getTransitionStyle(scene.transition, scene.transitionDuration || 0.5) : {};
 
@@ -361,7 +362,7 @@ export default function PreviewModal() {
           
           // Capture frame if enough time has passed
           if (currentTime - lastCaptureTime >= frameDuration * 0.9) {
-            const frameData = await renderFrameToDataURI(canvasRef.current, 1024, 768);
+            const frameData = await renderFrameToDataURI(canvasRef.current, NATIVE_W, NATIVE_H);
             if (frameData) {
               frames.push({
                 frameData,
@@ -410,8 +411,8 @@ export default function PreviewModal() {
       // Export to MP4
       await exportAnimationAsMP4(frames, {
         fps,
-        width: 1024,
-        height: 768,
+        width: NATIVE_W,
+        height: NATIVE_H,
         title: project?.title || 'OpenDoodler Animation',
       });
 
@@ -442,7 +443,7 @@ export default function PreviewModal() {
         borderRadius: 12, padding: isMobile ? 12 : 24,
         boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
         animation: 'modalIn 0.2s cubic-bezier(0.34,1.56,0.64,1)',
-        width: '100%', maxWidth: 848, boxSizing: 'border-box',
+        width: '100%', maxWidth: Math.max(848, NATIVE_W + (isMobile ? 24 : 48)), boxSizing: 'border-box',
       }}>
 
         {/* Header */}
@@ -458,17 +459,19 @@ export default function PreviewModal() {
 
         {/* Canvas — scale-to-fit available width at all screen sizes */}
         {(() => {
-          const pad   = isMobile ? 12 : 24;
-          const avail = Math.min(window.innerWidth - 40, 848) - pad * 2;
-          const scale = Math.min(avail / 800, 1);
+          const pad       = isMobile ? 12 : 24;
+          const maxDialogW = Math.max(848, NATIVE_W + pad * 2);
+          const availW    = Math.min(window.innerWidth - 40, maxDialogW) - pad * 2;
+          const availH    = window.innerHeight * 0.75; // cap at 75vh so controls stay visible
+          const scale     = Math.min(availW / NATIVE_W, availH / NATIVE_H, 1);
           return (
-        <div ref={outerRef} style={{ width: '100%', height: Math.round(450 * scale), borderRadius: 8, overflow: 'hidden', position: 'relative' }}>
+        <div ref={outerRef} style={{ width: Math.round(NATIVE_W * scale), height: Math.round(NATIVE_H * scale), borderRadius: 8, overflow: 'hidden', position: 'relative', margin: '0 auto' }}>
         <div
           key={canvasKey}
           ref={canvasRef}
           style={{
             position: 'absolute', top: 0, left: 0,
-            width: 800, height: 450,
+            width: NATIVE_W, height: NATIVE_H,
             ...boardStyle,
             borderRadius: 8, overflow: 'hidden',
             transformOrigin: 'top left',
