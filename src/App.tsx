@@ -8,6 +8,7 @@ import NewProjectModal from './components/dialogs/NewProjectModal';
 import PreviewModal from './components/dialogs/PreviewModal';
 import CanvasPreviewOverlay from './components/shared/CanvasPreviewOverlay';
 import { ProjectSettingsModal, SceneSettingsModal } from './components/dialogs/SettingsModals';
+import { HandPanelModal } from './components/dialogs/HandPanelModal';
 import { useKeyboard } from './hooks/useKeyboard';
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
   const showCanvasPreview = useStore(s => s.showCanvasPreview);
   const showSceneSettingsModal = useStore(s => s.showSceneSettingsModal);
   const showProjectSettingsModal = useStore(s => s.showProjectSettingsModal);
+  const showHandPanelModal = useStore(s => s.showHandPanelModal);
 
   useKeyboard();
 
@@ -32,6 +34,7 @@ export default function App() {
       {showPreviewModal && <PreviewModal />}
       {showSceneSettingsModal && <SceneSettingsModal />}
       {showProjectSettingsModal && <ProjectSettingsModal />}
+      {showHandPanelModal && <HandPanelModal />}
 
       {/* Canvas preview overlay — triggered from timeline play button */}
       {showCanvasPreview && <CanvasPreviewOverlay />}

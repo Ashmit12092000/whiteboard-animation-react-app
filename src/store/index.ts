@@ -80,6 +80,7 @@ export const useStore = create((set, get) => ({
   gridType:   'lines',
   showSceneSettingsModal: false,
   showProjectSettingsModal: false,
+  showHandPanelModal: false,
 
   // ── Audio recording / TTS modals (toggled from canvas HUD) ────────────────
   showVoiceRecorder: false,
@@ -719,4 +720,6 @@ export const useStore = create((set, get) => ({
   closeSceneSettings() { set({ showSceneSettingsModal: false }); },
   openProjectSettings() { set({ showProjectSettingsModal: true }); },
   closeProjectSettings() { set({ showProjectSettingsModal: false }); },
+  openHandPanel() { set({ showHandPanelModal: true }); },
+  closeHandPanel() { set({ showHandPanelModal: false }); },
 }));

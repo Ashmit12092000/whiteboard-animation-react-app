@@ -7,7 +7,7 @@ import AnimatedTextReveal from '../shared/AnimatedTextReveal';
 import AnimatedImageReveal from '../shared/AnimatedImageReveal';
 import AnimatedFillReveal from '../shared/AnimatedFillReveal';
 import WhiteboardHand from '../shared/WhiteboardHand';
-import { getBoardStyle, getTransitionStyle } from '../../utils/animation';
+import { getBoardStyle, getTransitionStyle, getCanvasSize } from '../../utils/animation';
 import { getEffectiveFontFamily } from '../../services/fontService';
 import { getEntryEffectStyle } from '../canvas/ContextMenu';
 import CameraLayer from '../../camera/CameraLayer';
@@ -249,9 +249,8 @@ export default function CanvasPreviewOverlay() {
     return () => window.removeEventListener('keydown', onKey);
   }, [handleClose]);
 
-  // Scale to match canvas: 800×450 native, scaled to fit
-  const NATIVE_W = 800;
-  const NATIVE_H = 450;
+  // Scale to match the project's actual canvas size (16:9, 9:16, 1:1, 4:3, 3:4...)
+  const { w: NATIVE_W, h: NATIVE_H } = getCanvasSize(project?.canvasSizeKey);
 
   return (
     <div

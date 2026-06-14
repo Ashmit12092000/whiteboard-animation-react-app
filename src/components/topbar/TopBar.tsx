@@ -205,6 +205,7 @@ export default function TopBar() {
   const openPreviewModal      = useStore(s => s.openPreviewModal);
   const openProjectSettings   = useStore(s => s.openProjectSettings);
   const openSceneSettings     = useStore(s => s.openSceneSettings);
+  const openHandPanel         = useStore(s => s.openHandPanel);
   const undo                  = useStore(s => s.undo);
   const redo                  = useStore(s => s.redo);
   const undoStack             = useStore(s => s.undoStack);
@@ -222,6 +223,7 @@ export default function TopBar() {
         { icon: '▶', label: 'Preview', action: openPreviewModal },
         '---',
         { icon: '⚙', label: 'Project Settings', action: openProjectSettings },
+        { icon: '✋', label: 'Hand Panel', action: openHandPanel },
         '---',
         { icon: '🏠', label: 'Back to Home', action: closeProject },
       ],
@@ -329,6 +331,14 @@ export default function TopBar() {
                 title="Project settings"
               >
                 Project
+              </TopBarActionBtn>
+              <TopBarActionBtn
+                color="#ec4899"
+                icon="✋"
+                onClick={openHandPanel}
+                title="Hand panel"
+              >
+                Hand Panel
               </TopBarActionBtn>
             </>
           )}
