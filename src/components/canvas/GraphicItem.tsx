@@ -23,7 +23,7 @@ const HANDLES = [
 ];
 
 export default function GraphicItem({ graphic, isSelected, playing, onTipMove, seqDelay, playStartTime, snap }) {
-  const isMobile      = useMobile();
+  const isMobile           = useMobile();
   const moveGraphic        = useStore(s => s.moveGraphic);
   const resizeGraphic      = useStore(s => s.resizeGraphic);
   const rotateGraphic      = useStore(s => s.rotateGraphic);
@@ -31,7 +31,6 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
   const commitHistory      = useStore(s => s.commitHistory);
   const updateGraphicProps = useStore(s => s.updateGraphicProps);
 
-  // Identity snap when no snap function is provided
   const snapVal = snap ?? (v => v);
 
   const dragState      = useRef(null);
@@ -40,12 +39,11 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
   const longPressTimer = useRef(null);
   const longPressFired = useRef(false);
 
-  const [contextMenu, setContextMenu] = useState(null); // { x, y }
-  // previewKey: bump to re-trigger CSS animation on effect change
-  const [previewKey, setPreviewKey] = useState(0);
-  // inline text editing
-  const [isEditing, setIsEditing]   = useState(false);
-  const textareaRef = useRef(null);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [previewKey,  setPreviewKey]  = useState(0);
+  const [isEditing,   setIsEditing]   = useState(false);
+  const textareaRef    = useRef(null);
+  const originalTextRef = useRef('');
 
   // ─── Right-click context menu ─────────────────────────────────────────────
   const handleContextMenu = (e) => {
@@ -56,10 +54,7 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
     setContextMenu({ x: e.clientX, y: e.clientY });
   };
 
-  // Called from ContextMenu when an effect is picked — re-trigger preview
-  const handleEffectPreview = () => {
-    setPreviewKey(k => k + 1);
-  };
+  const handleEffectPreview = () => setPreviewKey(k => k + 1);
 
   // ─── Double-click → inline text edit ─────────────────────────────────────
   const handleDoubleClick = (e) => {
@@ -67,33 +62,21 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
     e.stopPropagation();
     e.preventDefault();
     selectGraphic(graphic.id);
-    startTextEdit();
+    originalTextRef.current = graphic.rawText ?? '';
+    commitHistory();
     setIsEditing(true);
-    // Focus textarea on next frame so it's mounted
     setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        // Place cursor at end
-        const len = textareaRef.current.value.length;
-        textareaRef.current.setSelectionRange(len, len);
-      }
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      const len = ta.value.length;
+      ta.setSelectionRange(len, len);
     }, 0);
   };
 
-  // originalTextRef holds the text at the moment editing started — used for Escape cancel
-  const originalTextRef = useRef('');
-
-  const startTextEdit = () => {
-    originalTextRef.current = graphic.rawText ?? '';
-    commitHistory(); // snapshot before editing begins
-  };
-
-  const commitTextEdit = () => {
-    setIsEditing(false);
-  };
+  const commitTextEdit = () => setIsEditing(false);
 
   const cancelTextEdit = () => {
-    // Revert to the snapshot taken when editing started
     updateGraphicProps(graphic.id, { rawText: originalTextRef.current });
     setIsEditing(false);
   };
@@ -101,7 +84,7 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
   // ─── Mouse drag to move ───────────────────────────────────────────────────
   const handleMouseDown = (e) => {
     if (playing) return;
-    if (e.button === 2) return; // let right-click through
+    if (e.button === 2) return;
     e.stopPropagation();
     selectGraphic(graphic.id);
     dragState.current = { startX: e.clientX - graphic.x, startY: e.clientY - graphic.y };
@@ -123,7 +106,7 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
     window.addEventListener('mouseup', onUp);
   };
 
-  // ─── Touch drag to move (with long-press → context menu) ─────────────────
+  // ─── Touch drag to move ───────────────────────────────────────────────────
   const handleTouchStart = (e) => {
     if (playing) return;
     if (e.touches.length === 2) return;
@@ -131,22 +114,17 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
     selectGraphic(graphic.id);
     longPressFired.current = false;
     const t = e.touches[0];
-
-    // Long-press: 500ms hold opens context menu
     longPressTimer.current = setTimeout(() => {
       longPressFired.current = true;
       dragState.current = null;
       setContextMenu({ x: t.clientX, y: t.clientY });
       if (navigator.vibrate) navigator.vibrate(40);
     }, 500);
-
     dragState.current = { startX: t.clientX - graphic.x, startY: t.clientY - graphic.y };
     let committed = false;
-
     const onMove = (ev) => {
       if (ev.touches.length !== 1) return;
       const touch = ev.touches[0];
-      // Cancel long press if finger moves more than 6px
       if (Math.hypot(touch.clientX - t.clientX, touch.clientY - t.clientY) > 6) {
         clearTimeout(longPressTimer.current);
       }
@@ -246,13 +224,9 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
   const flipScale   = `${flipX ? -1 : 1}, ${flipY ? -1 : 1}`;
   const entryEffect = graphic.entryEffect ?? 'none';
 
-  // Entry effect style — applied during playback AND as a real-time preview
-  // when not playing (triggered by previewKey change)
   const effectStyle = playing
     ? getEntryEffectStyle(entryEffect, Math.min(graphic.duration * 0.6, 1.0))
     : {};
-
-  // After context-menu effect pick: show preview animation briefly
   const previewStyle = !playing && previewKey > 0
     ? getEntryEffectStyle(entryEffect, 0.7)
     : {};
@@ -265,15 +239,18 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         onTouchStart={(e) => { if (e.touches.length >= 2) handlePinchStart(e); else handleTouchStart(e); }}
-        key={previewKey} // re-mount triggers CSS animation restart
+        key={previewKey}
         style={{
           position: 'absolute',
           left: graphic.x, top: graphic.y,
-          width: graphic.width, height: graphic.height,
+          // While editing: let the container grow with the textarea (overflow visible)
+          // so the blue border follows the textarea size, not the original graphic size.
+          width:  isEditing ? 'auto' : graphic.width,
+          height: isEditing ? 'auto' : graphic.height,
           transform: `rotate(${rotation}deg) scale(${flipScale})`,
           transformOrigin: 'center center',
           cursor: playing ? 'default' : isEditing ? 'text' : 'move',
-          outline: !playing && isSelected ? '2px solid #3b82f6' : 'none',
+          outline: !playing && isSelected && !isEditing ? '2px solid #3b82f6' : 'none',
           outlineOffset: 1,
           boxSizing: 'border-box',
           userSelect: 'none',
@@ -316,7 +293,6 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
                     style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', userSelect: 'none' }} />
                 );
               }
-              // Render cropped region via a clipping div + oversized img
               const scaleX = 1 / cr.w;
               const scaleY = 1 / cr.h;
               return (
@@ -363,7 +339,6 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
         {/* ── Selection handles ── */}
         {isSelected && !playing && (
           <>
-            {/* Rotate handle — bigger on mobile for finger tapping */}
             <div
               onMouseDown={handleRotateDown}
               title="Rotate"
@@ -386,7 +361,6 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
             </div>
             <div style={{ position: 'absolute', top: isMobile ? -14 : -12, left: '50%', transform: 'translateX(-50%)', width: 1, height: isMobile ? 14 : 12, background: '#3b82f6', pointerEvents: 'none' }} />
 
-            {/* 8 resize handles — desktop only (mobile uses pinch-to-resize) */}
             {!isMobile && HANDLES.map(h => (
               <div key={h.id} onMouseDown={handleResizeDown(h.id)}
                 style={{
@@ -399,7 +373,6 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
                 }} />
             ))}
 
-            {/* Mobile: pinch hint badge */}
             {isMobile && (
               <div style={{
                 position: 'absolute', bottom: -26, left: '50%', transform: 'translateX(-50%)',
@@ -410,7 +383,6 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
               }}>pinch to resize</div>
             )}
 
-            {/* Label + effect badge */}
             <div style={{
               position: 'absolute', top: isMobile ? -20 : -22, left: 0,
               display: 'flex', alignItems: 'center', gap: 4,
@@ -436,7 +408,6 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
         )}
       </div>
 
-      {/* Context menu — rendered outside the graphic div to avoid clipping */}
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
@@ -453,7 +424,6 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
 }
 
 function StaticText({ graphic }) {
-  // Use the same font the animation engine renders so static ↔ animated match exactly
   const effectiveFont = getEffectiveFontFamily(graphic.fontFamily);
   return (
     <div style={{
@@ -468,85 +438,125 @@ function StaticText({ graphic }) {
   );
 }
 
+// ─── Inline text editor ───────────────────────────────────────────────────────
+// Strategy: the textarea is UNCONTROLLED for sizing purposes.
+// - It is NOT driven by graphic.width/height in its style — React never
+//   overrides the DOM dimensions we set manually.
+// - On every input event we directly manipulate ta.style.width / ta.style.height
+//   via a syncSize() function (no useEffect, no re-render needed for sizing).
+// - We write to the store (onLiveChange) for sidebar sync, but guard against
+//   writing width/height back to the store during typing to avoid render loops.
+//   Width/height are only committed to the store on blur/confirm.
 function InlineTextEditor({ graphic, textareaRef, onCommit, onCancel, onLiveChange }) {
   const effectiveFont      = getEffectiveFontFamily(graphic.fontFamily);
   const updateGraphicProps = useStore(s => s.updateGraphicProps);
   const canvasSizeKey      = useStore(s => s.project?.canvasSizeKey);
   const { w: canvasW }     = getCanvasSize(canvasSizeKey);
 
-  // Maximum width the text box can grow to = canvas right edge minus graphic's left x
+  // Max available width from graphic's left edge to canvas right edge
   const maxW = canvasW - graphic.x;
 
-  // After every render: measure the "natural" single-line width (via scrollWidth)
-  // and the wrapped height (via scrollHeight), then update the graphic box size.
-  useEffect(() => {
+  // Ref to avoid stale closure over maxW inside syncSize
+  const maxWRef = useRef(maxW);
+  useEffect(() => { maxWRef.current = maxW; }, [maxW]);
+
+  // syncSize: directly mutates DOM — no React state, no re-render, no loop.
+  const syncSize = () => {
     const ta = textareaRef?.current;
     if (!ta) return;
 
-    // --- Width: expand to fit content on one line, capped at canvas edge ---
-    // Temporarily make it single-line + huge width to measure natural content width
-    ta.style.whiteSpace = 'pre';       // no wrap while measuring width
-    ta.style.width = `${maxW}px`;      // allow up to canvas edge
-    const naturalW = Math.min(ta.scrollWidth + 4, maxW); // +4 for caret breathing room
-    // Now set real width and allow wrapping (only at explicit newlines = pre)
-    ta.style.whiteSpace = 'pre';       // keep: only wrap at 
-
-    ta.style.width = `${naturalW}px`;
-
-    // --- Height: grow to fit all lines ---
+    // 1. Expand to maxW so scrollWidth reflects the full natural content width
+    ta.style.width  = maxWRef.current + 'px';
     ta.style.height = '0px';
-    const neededH = ta.scrollHeight;
-    ta.style.height = `${neededH}px`;
 
-    // Sync graphic box dimensions so the selection handles stay correct
-    const newW = naturalW;
-    const newH = neededH;
-    if (newW !== graphic.width || newH !== graphic.height) {
-      updateGraphicProps(graphic.id, { width: newW, height: newH });
-    }
-  });
+    // 2. Read natural width (widest line) and height (all lines)
+    const newW = Math.min(Math.max(ta.scrollWidth + 2, 40), maxWRef.current);
+    const newH = ta.scrollHeight;
+
+    // 3. Apply directly to DOM — React style prop is NOT set for width/height
+    //    so React will never clobber these values on re-render
+    ta.style.width  = newW + 'px';
+    ta.style.height = newH + 'px';
+
+    return { newW, newH };
+  };
+
+  // Run once on mount to size the textarea for the initial text value
+  useEffect(() => {
+    syncSize();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // On unmount (blur/confirm/cancel), write final dimensions to store
+  // so selection handles and sidebar size display are accurate
+  const commitSize = () => {
+    const ta = textareaRef?.current;
+    if (!ta) return;
+    const w = Math.round(parseFloat(ta.style.width)  || graphic.width);
+    const h = Math.round(parseFloat(ta.style.height) || graphic.height);
+    updateGraphicProps(graphic.id, { width: w, height: h });
+  };
 
   return (
     <textarea
       ref={textareaRef}
-      // Controlled by store so sidebar stays in sync on every keystroke
-      value={graphic.rawText ?? ''}
-      onChange={e => onLiveChange(e.target.value)}
-      onBlur={() => onCommit()}
+      // defaultValue = uncontrolled — React won't touch the DOM value after mount.
+      // onLiveChange keeps the store (and sidebar) in sync on every keystroke.
+      defaultValue={graphic.rawText ?? ''}
+      onChange={e => {
+        onLiveChange(e.target.value);   // sync store → sidebar updates
+        syncSize();                      // resize DOM immediately, no re-render
+      }}
+      onBlur={() => {
+        commitSize();
+        onCommit();
+      }}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-        // Ctrl/Cmd+Enter = confirm (plain Enter adds a newline, which is fine)
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); onCommit(); }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          commitSize();
+          onCancel();
+        }
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          commitSize();
+          onCommit();
+        }
+        // After Enter/Backspace/Delete: resize on next frame when DOM has updated
+        if (['Enter', 'Backspace', 'Delete'].includes(e.key)) {
+          requestAnimationFrame(syncSize);
+        }
       }}
       onMouseDown={e => e.stopPropagation()}
       onClick={e => e.stopPropagation()}
       style={{
-        display: 'block',
-        // width + height driven by useEffect measurements above
-        width: graphic.width,
-        minHeight: graphic.height,
-        height: 'auto',
-        overflow: 'hidden',
-        background: 'rgba(59,130,246,0.08)',
-        border: '2px solid #3b82f6',
+        display:      'block',
+        // ── DO NOT set width/height here ──
+        // syncSize() controls them directly on the DOM node.
+        // If we set them via React style, React overwrites our DOM mutations
+        // on every re-render (e.g. when store updates from onLiveChange).
+        minWidth:     40,
+        minHeight:    graphic.height,
+        overflow:     'hidden',
+        background:   'rgba(59,130,246,0.08)',
+        border:       '2px solid #3b82f6',
         borderRadius: 4,
-        outline: 'none',
-        resize: 'none',
-        padding: 0,
-        margin: 0,
-        boxSizing: 'border-box',
-        fontFamily: effectiveFont,
-        fontWeight: graphic.fontWeight,
-        fontStyle: graphic.fontStyle,
-        fontSize: graphic.fontSize,
-        lineHeight: 1.2,
-        color: graphic.color || '#1a1a1a',
-        cursor: 'text',
-        caretColor: graphic.color || '#1a1a1a',
-        // Only wrap at explicit newlines — matches single-line natural typing feel
-        whiteSpace: 'pre',
-        wordBreak: 'normal',
+        outline:      'none',
+        resize:       'none',
+        padding:      0,
+        margin:       0,
+        boxSizing:    'border-box',
+        fontFamily:   effectiveFont,
+        fontWeight:   graphic.fontWeight,
+        fontStyle:    graphic.fontStyle,
+        fontSize:     graphic.fontSize,
+        lineHeight:   1.2,
+        color:        graphic.color || '#1a1a1a',
+        cursor:       'text',
+        caretColor:   graphic.color || '#1a1a1a',
+        // pre = only wrap at explicit \n (Enter key), never auto word-wrap
+        whiteSpace:   'pre',
+        wordBreak:    'normal',
       }}
     />
   );
