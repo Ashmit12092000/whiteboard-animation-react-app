@@ -698,6 +698,64 @@ export const useStore = create((set, get) => ({
     });
   },
 
+  // Splits an audio clip at a specific fractional position (0-1) within its
+  // trimmed region. splitFrac is a fraction of the FULL clip duration (0..1).
+  // The playhead time is converted to a fraction by the caller.
+  splitAudioTrackAtFrac(trackId, splitFrac) {
+    set(state => {
+      const hist = pushHistory(state);
+      return produce({ ...state, ...hist }, draft => {
+        if (!draft.project.audioTracks) return;
+        const idx = draft.project.audioTracks.findIndex(t => t.id === trackId);
+        if (idx < 0) return;
+
+        const track     = draft.project.audioTracks[idx];
+        const trimStart = track.trimStart ?? 0;
+        const trimEnd   = track.trimEnd   ?? 1;
+
+        // Clamp splitFrac to within the active trimmed region
+        const splitAt = Math.max(trimStart + MIN_AUDIO_TRIM_FRAC, Math.min(trimEnd - MIN_AUDIO_TRIM_FRAC, splitFrac));
+
+        if (splitAt - trimStart < MIN_AUDIO_TRIM_FRAC || trimEnd - splitAt < MIN_AUDIO_TRIM_FRAC) return;
+
+        const { _audioBuffer, ...rest } = track;
+        const second = {
+          ...rest,
+          id: crypto.randomUUID(),
+          name: appendSplitSuffix(track.name),
+          trimStart: splitAt,
+          trimEnd: trimEnd,
+        };
+
+        track.trimEnd = splitAt;
+        track.name = appendSplitSuffix(track.name, 1);
+
+        if (_audioBuffer !== undefined) {
+          second._audioBuffer = _audioBuffer;
+          track._audioBuffer  = _audioBuffer;
+        }
+
+        draft.project.audioTracks.splice(idx + 1, 0, second);
+      });
+    });
+  },
+
+  // Move an audio track up (-1) or down (+1) in the list
+  reorderAudioTrack(trackId, direction) {
+    set(state => {
+      const hist = pushHistory(state);
+      return produce({ ...state, ...hist }, draft => {
+        if (!draft.project.audioTracks) return;
+        const idx = draft.project.audioTracks.findIndex(t => t.id === trackId);
+        if (idx < 0) return;
+        const newIdx = idx + direction;
+        if (newIdx < 0 || newIdx >= draft.project.audioTracks.length) return;
+        const [item] = draft.project.audioTracks.splice(idx, 1);
+        draft.project.audioTracks.splice(newIdx, 0, item);
+      });
+    });
+  },
+
   // ── Playhead ──────────────────────────────────────────────────────────────────
   setPlayheadTime(t) { set({ playheadTime: t }); },
 

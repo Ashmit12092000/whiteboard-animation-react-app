@@ -25,7 +25,8 @@ const loadPromises = {};
 
 async function loadFont(family, weight = 'normal') {
   const path = getFontPath(family, weight);
-  const url  = (import.meta.env.BASE_URL.replace(/\/$/, '') || '') + path;
+  const base = import.meta.env.BASE_URL ?? '/';
+  const url  = base.endsWith('/') ? base + path : base + '/' + path;
   if (fontCache[url]) return fontCache[url];
   if (loadPromises[url]) return loadPromises[url];
   loadPromises[url] = (async () => {

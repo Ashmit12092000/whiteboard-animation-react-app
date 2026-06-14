@@ -145,6 +145,35 @@ export default function GraphicListItem({ graphic, isSelected, onDragStart, onDr
           </Row>
 
           {graphic.type === 'text' && (
+            <Row label="Text">
+              <textarea
+                value={graphic.rawText ?? ''}
+                onChange={e => updateGraphicProps(graphic.id, { rawText: e.target.value })}
+                onMouseDown={e => e.stopPropagation()}
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => e.stopPropagation()}
+                rows={3}
+                placeholder="Enter text…"
+                style={{
+                  width: '100%',
+                  background: '#0f172a',
+                  border: '1px solid #334155',
+                  borderRadius: 4,
+                  padding: '5px 7px',
+                  color: '#e2e8f0',
+                  fontSize: 12,
+                  outline: 'none',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                  fontFamily: graphic.fontFamily || 'sans-serif',
+                  fontWeight: graphic.fontWeight,
+                  fontStyle: graphic.fontStyle,
+                  lineHeight: 1.4,
+                }}
+              />
+            </Row>
+          )}
+          {graphic.type === 'text' && (
             <Row label="Color">
               <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexWrap: 'wrap', rowGap: 6 }}>
                 <input

@@ -1,7 +1,8 @@
 // @ts-nocheck
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import SvgRenderer from '../shared/SvgRenderer';
 import { getEffectiveFontFamily } from '../../services/fontService';
+import { getCanvasSize } from '../../utils/animation';
 import AnimatedSvgRenderer from '../shared/AnimatedSvgRenderer';
 import AnimatedTextReveal from '../shared/AnimatedTextReveal';
 import AnimatedImageReveal from '../shared/AnimatedImageReveal';
@@ -23,11 +24,12 @@ const HANDLES = [
 
 export default function GraphicItem({ graphic, isSelected, playing, onTipMove, seqDelay, playStartTime, snap }) {
   const isMobile      = useMobile();
-  const moveGraphic   = useStore(s => s.moveGraphic);
-  const resizeGraphic = useStore(s => s.resizeGraphic);
-  const rotateGraphic = useStore(s => s.rotateGraphic);
-  const selectGraphic = useStore(s => s.selectGraphic);
-  const commitHistory = useStore(s => s.commitHistory);
+  const moveGraphic        = useStore(s => s.moveGraphic);
+  const resizeGraphic      = useStore(s => s.resizeGraphic);
+  const rotateGraphic      = useStore(s => s.rotateGraphic);
+  const selectGraphic      = useStore(s => s.selectGraphic);
+  const commitHistory      = useStore(s => s.commitHistory);
+  const updateGraphicProps = useStore(s => s.updateGraphicProps);
 
   // Identity snap when no snap function is provided
   const snapVal = snap ?? (v => v);
@@ -41,6 +43,9 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
   const [contextMenu, setContextMenu] = useState(null); // { x, y }
   // previewKey: bump to re-trigger CSS animation on effect change
   const [previewKey, setPreviewKey] = useState(0);
+  // inline text editing
+  const [isEditing, setIsEditing]   = useState(false);
+  const textareaRef = useRef(null);
 
   // ─── Right-click context menu ─────────────────────────────────────────────
   const handleContextMenu = (e) => {
@@ -54,6 +59,43 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
   // Called from ContextMenu when an effect is picked — re-trigger preview
   const handleEffectPreview = () => {
     setPreviewKey(k => k + 1);
+  };
+
+  // ─── Double-click → inline text edit ─────────────────────────────────────
+  const handleDoubleClick = (e) => {
+    if (playing || graphic.type !== 'text') return;
+    e.stopPropagation();
+    e.preventDefault();
+    selectGraphic(graphic.id);
+    startTextEdit();
+    setIsEditing(true);
+    // Focus textarea on next frame so it's mounted
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        // Place cursor at end
+        const len = textareaRef.current.value.length;
+        textareaRef.current.setSelectionRange(len, len);
+      }
+    }, 0);
+  };
+
+  // originalTextRef holds the text at the moment editing started — used for Escape cancel
+  const originalTextRef = useRef('');
+
+  const startTextEdit = () => {
+    originalTextRef.current = graphic.rawText ?? '';
+    commitHistory(); // snapshot before editing begins
+  };
+
+  const commitTextEdit = () => {
+    setIsEditing(false);
+  };
+
+  const cancelTextEdit = () => {
+    // Revert to the snapshot taken when editing started
+    updateGraphicProps(graphic.id, { rawText: originalTextRef.current });
+    setIsEditing(false);
   };
 
   // ─── Mouse drag to move ───────────────────────────────────────────────────
@@ -220,6 +262,7 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
       <div
         ref={containerRef}
         onMouseDown={handleMouseDown}
+        onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         onTouchStart={(e) => { if (e.touches.length >= 2) handlePinchStart(e); else handleTouchStart(e); }}
         key={previewKey} // re-mount triggers CSS animation restart
@@ -229,7 +272,7 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
           width: graphic.width, height: graphic.height,
           transform: `rotate(${rotation}deg) scale(${flipScale})`,
           transformOrigin: 'center center',
-          cursor: playing ? 'default' : 'move',
+          cursor: playing ? 'default' : isEditing ? 'text' : 'move',
           outline: !playing && isSelected ? '2px solid #3b82f6' : 'none',
           outlineOffset: 1,
           boxSizing: 'border-box',
@@ -306,6 +349,14 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
             delay={activeDelay}
             onTipMove={onTipMove}
             playStartTime={playStartTime}
+          />
+        ) : isEditing ? (
+          <InlineTextEditor
+            graphic={graphic}
+            textareaRef={textareaRef}
+            onCommit={commitTextEdit}
+            onCancel={cancelTextEdit}
+            onLiveChange={(text) => updateGraphicProps(graphic.id, { rawText: text })}
           />
         ) : <StaticText graphic={graphic} />}
 
@@ -414,5 +465,89 @@ function StaticText({ graphic }) {
       lineHeight: 1.2,
       color: graphic.color || '#1a1a1a',
     }}>{graphic.rawText}</div>
+  );
+}
+
+function InlineTextEditor({ graphic, textareaRef, onCommit, onCancel, onLiveChange }) {
+  const effectiveFont      = getEffectiveFontFamily(graphic.fontFamily);
+  const updateGraphicProps = useStore(s => s.updateGraphicProps);
+  const canvasSizeKey      = useStore(s => s.project?.canvasSizeKey);
+  const { w: canvasW }     = getCanvasSize(canvasSizeKey);
+
+  // Maximum width the text box can grow to = canvas right edge minus graphic's left x
+  const maxW = canvasW - graphic.x;
+
+  // After every render: measure the "natural" single-line width (via scrollWidth)
+  // and the wrapped height (via scrollHeight), then update the graphic box size.
+  useEffect(() => {
+    const ta = textareaRef?.current;
+    if (!ta) return;
+
+    // --- Width: expand to fit content on one line, capped at canvas edge ---
+    // Temporarily make it single-line + huge width to measure natural content width
+    ta.style.whiteSpace = 'pre';       // no wrap while measuring width
+    ta.style.width = `${maxW}px`;      // allow up to canvas edge
+    const naturalW = Math.min(ta.scrollWidth + 4, maxW); // +4 for caret breathing room
+    // Now set real width and allow wrapping (only at explicit newlines = pre)
+    ta.style.whiteSpace = 'pre';       // keep: only wrap at 
+
+    ta.style.width = `${naturalW}px`;
+
+    // --- Height: grow to fit all lines ---
+    ta.style.height = '0px';
+    const neededH = ta.scrollHeight;
+    ta.style.height = `${neededH}px`;
+
+    // Sync graphic box dimensions so the selection handles stay correct
+    const newW = naturalW;
+    const newH = neededH;
+    if (newW !== graphic.width || newH !== graphic.height) {
+      updateGraphicProps(graphic.id, { width: newW, height: newH });
+    }
+  });
+
+  return (
+    <textarea
+      ref={textareaRef}
+      // Controlled by store so sidebar stays in sync on every keystroke
+      value={graphic.rawText ?? ''}
+      onChange={e => onLiveChange(e.target.value)}
+      onBlur={() => onCommit()}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+        // Ctrl/Cmd+Enter = confirm (plain Enter adds a newline, which is fine)
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); onCommit(); }
+      }}
+      onMouseDown={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
+      style={{
+        display: 'block',
+        // width + height driven by useEffect measurements above
+        width: graphic.width,
+        minHeight: graphic.height,
+        height: 'auto',
+        overflow: 'hidden',
+        background: 'rgba(59,130,246,0.08)',
+        border: '2px solid #3b82f6',
+        borderRadius: 4,
+        outline: 'none',
+        resize: 'none',
+        padding: 0,
+        margin: 0,
+        boxSizing: 'border-box',
+        fontFamily: effectiveFont,
+        fontWeight: graphic.fontWeight,
+        fontStyle: graphic.fontStyle,
+        fontSize: graphic.fontSize,
+        lineHeight: 1.2,
+        color: graphic.color || '#1a1a1a',
+        cursor: 'text',
+        caretColor: graphic.color || '#1a1a1a',
+        // Only wrap at explicit newlines — matches single-line natural typing feel
+        whiteSpace: 'pre',
+        wordBreak: 'normal',
+      }}
+    />
   );
 }

@@ -224,11 +224,13 @@ function TrackContextMenu({ x, y, graphic, scene, onClose, onTrim }) {
 }
 
 // ─── Audio track context menu ─────────────────────────────────────────────────
-function AudioTrackContextMenu({ x, y, track, onClose, onTrim }) {
-  const removeAudioTrack  = useStore(s => s.removeAudioTrack);
-  const updateAudioTrack  = useStore(s => s.updateAudioTrack);
-  const splitAudioTrack   = useStore(s => s.splitAudioTrack);
-  const commitHistory     = useStore(s => s.commitHistory);
+function AudioTrackContextMenu({ x, y, track, onClose, onTrim, playheadTime }) {
+  const removeAudioTrack        = useStore(s => s.removeAudioTrack);
+  const updateAudioTrack        = useStore(s => s.updateAudioTrack);
+  const splitAudioTrackAtFrac   = useStore(s => s.splitAudioTrackAtFrac);
+  const reorderAudioTrack       = useStore(s => s.reorderAudioTrack);
+  const commitHistory           = useStore(s => s.commitHistory);
+  const audioTracks             = useStore(s => s.project?.audioTracks ?? []);
   const isTTS = track.type === 'tts';
   const isMusic = track.type === 'music';
   const header = isTTS ? '🔊 TTS Track' : isMusic ? '🎵 Music Track' : '🎙 Voice Track';
@@ -240,7 +242,16 @@ function AudioTrackContextMenu({ x, y, track, onClose, onTrim }) {
 
   const trimStart = track.trimStart ?? 0;
   const trimEnd   = track.trimEnd   ?? 1;
-  const canSplit  = (trimEnd - trimStart) / 2 >= MIN_AUDIO_TRIM_FRAC;
+  const dur       = track.duration  ?? 1;
+
+  // Convert playhead time → fraction of full clip duration
+  const playheadFrac = dur > 0 ? Math.min(1, Math.max(0, playheadTime / dur)) : 0.5;
+  const canSplit = playheadFrac > trimStart + MIN_AUDIO_TRIM_FRAC &&
+                   playheadFrac < trimEnd   - MIN_AUDIO_TRIM_FRAC;
+
+  const trackIdx = audioTracks.findIndex(t => t.id === track.id);
+  const isFirst  = trackIdx === 0;
+  const isLast   = trackIdx === audioTracks.length - 1;
 
   // Discrete, single-shot edit from a menu item: record undo state first.
   const update = (changes) => { commitHistory(); updateAudioTrack(track.id, changes); };
@@ -248,8 +259,11 @@ function AudioTrackContextMenu({ x, y, track, onClose, onTrim }) {
   const items = [
     { header },
     { sep: true },
-    { label: 'Split at Midpoint', icon: '✂', disabled: !canSplit, action: () => { if (!canSplit) return; splitAudioTrack(track.id); onClose(); } },
-    { label: 'Trim…',              icon: '⬌', action: () => { onTrim?.(track); onClose(); } },
+    { label: 'Move Up',   icon: '↑', disabled: isFirst, action: () => { reorderAudioTrack(track.id, -1); onClose(); } },
+    { label: 'Move Down', icon: '↓', disabled: isLast,  action: () => { reorderAudioTrack(track.id,  1); onClose(); } },
+    { sep: true },
+    { label: 'Split at Playhead', icon: '✂', disabled: !canSplit, action: () => { if (!canSplit) return; splitAudioTrackAtFrac(track.id, playheadFrac); onClose(); } },
+    { label: 'Trim…',             icon: '⬌', action: () => { onTrim?.(track); onClose(); } },
     { sep: true },
     // Volume steps
     { label: 'Volume 100%', icon: '🔊', action: () => { update({ volume: 1.0 }); onClose(); } },
@@ -438,6 +452,77 @@ function AudioTrackBar({ track, totalW, color, label, onContextMenu, onSelect })
     </div>
   );
 }
+
+// ─── Draggable audio row bar ──────────────────────────────────────────────────
+function DraggableAudioRow({ track, color, icon, pxPerS, onContextMenu }) {
+  const reorderAudioTrack = useStore(s => s.reorderAudioTrack);
+  const [dragOver, setDragOver] = useState(null); // 'top' | 'bottom' | null
+
+  const dur    = track.duration ?? 1;
+  const totalW = dur * pxPerS;
+
+  const onDragStart = (e) => {
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/audio-track-id', track.id);
+    setTimeout(() => { if (e.currentTarget) e.currentTarget.style.opacity = '0.4'; }, 0);
+  };
+  const onDragEnd = (e) => {
+    if (e.currentTarget) e.currentTarget.style.opacity = '1';
+    setDragOver(null);
+  };
+  const onDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragOver(e.clientY < rect.top + rect.height / 2 ? 'top' : 'bottom');
+  };
+  const onDragLeave = () => setDragOver(null);
+  const onDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(null);
+    const fromId = e.dataTransfer.getData('application/audio-track-id');
+    if (!fromId || fromId === track.id) return;
+    const audioTracks = useStore.getState().project?.audioTracks ?? [];
+    const fromIdx = audioTracks.findIndex(t => t.id === fromId);
+    const toIdx   = audioTracks.findIndex(t => t.id === track.id);
+    if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+    const direction = toIdx - fromIdx;
+    reorderAudioTrack(fromId, direction);
+  };
+
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      style={{
+        height: AUDIO_ROW_H,
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: 'grab',
+        boxSizing: 'border-box',
+        borderTop: dragOver === 'top'    ? `2px solid #f59e0b` : '1px solid transparent',
+        borderBottom: dragOver === 'bottom' ? `2px solid #f59e0b` : '1px solid transparent',
+        transition: 'border-color 0.1s',
+      }}
+    >
+      <AudioTrackBar
+        track={track}
+        totalW={totalW}
+        color={color}
+        label={icon}
+        onContextMenu={onContextMenu}
+      />
+    </div>
+  );
+}
+
 
 
 function TrackLabel({ graphic, isSelected, onSelect, onContextMenu }) {
@@ -900,10 +985,13 @@ export default function EditorTimeline() {
                 {/* Voice / Music / TTS row labels — only shown when that row has tracks */}
                 {AUDIO_ROW_TYPES.map(({ type, label, color, match }) => {
                   if (!audioTracks.some(match)) return null;
+                  const rowTracks = audioTracks.filter(match);
                   return (
-                    <div key={type} style={{ width: LABEL_W, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', height: AUDIO_ROW_H, boxSizing: 'border-box' }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, flex: 1 }}>{label}</span>
+                    <div key={type} style={{ width: LABEL_W, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', boxSizing: 'border-box' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', height: AUDIO_ROW_H * rowTracks.length }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, flex: 1 }}>{label}</span>
+                      </div>
                     </div>
                   );
                 })}
@@ -969,27 +1057,23 @@ export default function EditorTimeline() {
                     />
                   </div>
 
-                  {/* Audio track bar areas — separate rows for voice / music / tts, only shown when used */}
+                  {/* Audio track bar areas — draggable rows, grouped by type */}
                   {AUDIO_ROW_TYPES.map(({ type, color, match }) => {
                     const rowTracks = audioTracks.filter(match);
                     if (rowTracks.length === 0) return null;
+                    const icon = type === 'tts' ? '🔊' : type === 'music' ? '🎵' : '🎙';
                     return (
-                      <div key={type} style={{ height: AUDIO_ROW_H, background: '#080d16', borderTop: '1px solid #1e293b', position: 'relative', overflow: 'hidden' }}>
-                        {rowTracks.map((track) => {
-                          const dur    = track.duration ?? 1;
-                          const totalW = dur * pxPerS;
-                          const icon   = type === 'tts' ? '🔊' : type === 'music' ? '🎵' : '🎙';
-                          return (
-                            <AudioTrackBar
-                              key={track.id}
-                              track={track}
-                              totalW={totalW}
-                              color={color}
-                              label={icon}
-                              onContextMenu={(e) => setAudioCtxMenu({ x: e.clientX, y: e.clientY, track })}
-                            />
-                          );
-                        })}
+                      <div key={type} style={{ background: '#080d16', borderTop: '1px solid #1e293b' }}>
+                        {rowTracks.map((track, tIdx) => (
+                          <DraggableAudioRow
+                            key={track.id}
+                            track={track}
+                            color={color}
+                            icon={icon}
+                            pxPerS={pxPerS}
+                            onContextMenu={(e) => setAudioCtxMenu({ x: e.clientX, y: e.clientY, track })}
+                          />
+                        ))}
                       </div>
                     );
                   })}
@@ -1041,6 +1125,7 @@ export default function EditorTimeline() {
             track={audioCtxMenu.track}
             onClose={() => setAudioCtxMenu(null)}
             onTrim={(t) => { setAudioTrimTrack(t); setAudioCtxMenu(null); }}
+            playheadTime={playheadTime}
           />
         )}
       </div>
