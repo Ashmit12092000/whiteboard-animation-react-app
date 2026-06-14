@@ -184,23 +184,7 @@ export default function CameraControls({
       zIndex:     30,
       pointerEvents: 'none',
     }}>
-      {/* Voice recorder / TTS */}
-      <div style={{ display: 'flex', gap: 6, pointerEvents: 'all', justifyContent: 'flex-end' }}>
-        <HudButton
-          onClick={() => setShowVoiceRecorder(true)}
-          title="Record voice"
-          style={{ minWidth: 36, color: '#f87171', borderColor: 'rgba(239,68,68,0.27)' }}
-        >
-          🎙 Voice
-        </HudButton>
-        <HudButton
-          onClick={() => setShowTTSModal(true)}
-          title="Text to speech"
-          style={{ minWidth: 36, color: '#60a5fa', borderColor: 'rgba(59,130,246,0.27)' }}
-        >
-          🔊 TTS
-        </HudButton>
-      </div>
+      
 
       {/* Camera edit mode toggle */}
       <div style={{ display: 'flex', gap: 6, pointerEvents: 'all', justifyContent: 'flex-end' }}>

@@ -46,6 +46,51 @@ const AUDIO_ROW_TYPES = [
   { type: 'music', label: '🎵 Music', color: '#0e7490', match: t => t.type === 'music' },
   { type: 'tts',   label: '🔊 TTS',   color: '#1d4ed8', match: t => t.type === 'tts' },
 ];
+const BTN = {
+  background: 'rgba(15,23,42,0.88)',
+  border:     '1px solid rgba(255,255,255,0.1)',
+  color:      '#e2e8f0',
+  borderRadius: 6,
+  cursor:     'pointer',
+  fontSize:   13,
+  fontWeight: 600,
+  lineHeight: 1,
+  display:    'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding:    '0 9px',
+  height:     30,
+  backdropFilter: 'blur(8px)',
+  transition: 'background 0.12s, border-color 0.12s',
+  flexShrink: 0,
+  userSelect: 'none',
+  gap: 5,
+};
+
+const BTN_HOVER = {
+  background:   'rgba(30,41,59,0.95)',
+  borderColor:  'rgba(255,255,255,0.22)',
+};
+
+function HudButton({ onClick, title, children, active, style: extra }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        ...BTN,
+        ...(hovered ? BTN_HOVER : {}),
+        ...(active ? { borderColor: '#f59e0b', color: '#f59e0b' } : {}),
+        ...extra,
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {children}
+    </button>
+  );
+}
 
 // ─── Time ruler ───────────────────────────────────────────────────────────────
 function TimeRuler({ totalS, pxPerS }) {
@@ -706,6 +751,20 @@ export default function EditorTimeline() {
                 <svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><path d="M4.5 0L9 4.5L4.5 9L0 4.5Z"/></svg>
                 Add Keyframe
               </button>
+              <HudButton
+          onClick={() => setShowVoiceRecorder(true)}
+          title="Record voice"
+          style={{ minWidth: 36, color: '#f87171', borderColor: 'rgba(239,68,68,0.27)' }}
+        >
+          🎙 Voice
+        </HudButton>
+        <HudButton
+          onClick={() => setShowTTSModal(true)}
+          title="Text to speech"
+          style={{ minWidth: 36, color: '#60a5fa', borderColor: 'rgba(59,130,246,0.27)' }}
+        >
+          🔊 TTS
+        </HudButton>
 
               {/* Divider */}
               {selectedKf && <div style={{ width: 1, height: 18, background: '#1e293b', flexShrink: 0 }} />}
