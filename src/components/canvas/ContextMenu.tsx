@@ -76,13 +76,15 @@ export function getEntryEffectStyle(effectId, durationSec = 0.6) {
 }
 
 // ─── Desktop flyout context menu ────────────────────────────────────────────
-function DesktopMenu({ x, y, graphicId, graphic, currentEffect, onEffectClick, currentReveal, isImageGraphic, onRevealClick, onDelete, onDuplicate, onClose }) {
+function DesktopMenu({ x, y, graphicId, graphic, currentEffect, onEffectClick, currentReveal, isImageGraphic, onRevealClick, onDelete, onDuplicate, onFlipH, onFlipV, onCrop, onClose }) {
   const menuRef     = useRef(null);
   const [showEffects, setShowEffects] = useState(false);
   const [showReveal, setShowReveal]   = useState(false);
+  const [showFlip, setShowFlip]       = useState(false);
   const [subPos, setSubPos]           = useState({ top: -4, left: '100%' });
   const effectRowRef = useRef(null);
   const revealRowRef = useRef(null);
+  const flipRowRef   = useRef(null);
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -256,6 +258,58 @@ function DesktopMenu({ x, y, graphicId, graphic, currentEffect, onEffectClick, c
         </>
       )}
 
+      {/* Flip submenu */}
+      <div ref={flipRowRef}
+        onMouseEnter={() => setShowFlip(true)}
+        onMouseLeave={() => setShowFlip(false)}
+        style={{ ...itemBase, background: showFlip ? '#2d3f55' : '' }}>
+        <span style={{ fontSize: 16 }}>↔</span>
+        <span style={{ flex: 1 }}>Flip</span>
+        <span style={{ color: '#64748b', fontSize: 10, marginLeft: 4 }}>▶</span>
+
+        {showFlip && (() => {
+          const flipSubW = 180;
+          const rowEl = flipRowRef.current;
+          const rowRect = rowEl ? rowEl.getBoundingClientRect() : { top: 0 };
+          const goLeft = adjX + menuW + flipSubW > window.innerWidth;
+          const subTop = rowRect.top;
+          return (
+            <div
+              onMouseEnter={() => setShowFlip(true)}
+              onMouseLeave={() => setShowFlip(false)}
+              style={{
+                position: 'fixed',
+                top: subTop,
+                ...(goLeft ? { right: window.innerWidth - adjX } : { left: adjX + menuW }),
+                background: '#1e293b', border: '1px solid #334155', borderRadius: 10,
+                boxShadow: '0 12px 40px rgba(0,0,0,0.55)', minWidth: flipSubW,
+                zIndex: 10000, animation: 'wb-fadeIn 0.1s ease both',
+                overflow: 'hidden',
+              }}>
+              {[
+                { icon: '↔', label: 'Horizontal Flip', action: onFlipH },
+                { icon: '↕', label: 'Vertical Flip',   action: onFlipV },
+              ].map(item => (
+                <div key={item.label} onClick={item.action}
+                  onMouseEnter={e => e.currentTarget.style.background = '#2d3f55'}
+                  onMouseLeave={e => e.currentTarget.style.background = ''}
+                  style={{ ...itemBase, margin: '2px 4px' }}>
+                  <span style={{ fontSize: 15 }}>{item.icon}</span>
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Crop (images only) */}
+      {isImageGraphic && (
+        <MenuItem icon="✂️" label="Crop & Rotate" onClick={() => { onCrop(); onClose(); }} />
+      )}
+
+      <Divider />
+
       {/* Duplicate */}
       <MenuItem icon="⧉" label="Duplicate" onClick={onDuplicate} />
 
@@ -268,8 +322,8 @@ function DesktopMenu({ x, y, graphicId, graphic, currentEffect, onEffectClick, c
 }
 
 // ─── Mobile bottom sheet ─────────────────────────────────────────────────────
-function MobileSheet({ graphicId, graphic, currentEffect, onEffectClick, currentReveal, isImageGraphic, onRevealClick, onDelete, onDuplicate, onClose }) {
-  const [view, setView] = useState('main'); // 'main' | 'effects' | 'reveal'
+function MobileSheet({ graphicId, graphic, currentEffect, onEffectClick, currentReveal, isImageGraphic, onRevealClick, onDelete, onDuplicate, onFlipH, onFlipV, onCrop, onClose }) {
+  const [view, setView] = useState('main'); // 'main' | 'effects' | 'reveal' | 'flip'
   const [closing, setClosing] = useState(false);
   const sheetRef = useRef(null);
 
@@ -379,6 +433,24 @@ function MobileSheet({ graphicId, graphic, currentEffect, onEffectClick, current
               </div>
             )}
 
+            {/* Flip */}
+            <div onTouchEnd={() => setView('flip')} onClick={() => setView('flip')}
+              style={{ ...itemStyle, justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <span style={{ fontSize: 20 }}>↔</span>
+                <span style={{ fontWeight: 500 }}>Flip</span>
+              </div>
+              <span style={{ color: '#64748b', fontSize: 18 }}>›</span>
+            </div>
+
+            {/* Crop (images only) */}
+            {isImageGraphic && (
+              <div onTouchEnd={() => { onCrop(); close(); }} onClick={() => { onCrop(); close(); }} style={itemStyle}>
+                <span style={{ fontSize: 20 }}>✂️</span>
+                <span style={{ fontWeight: 500 }}>Crop & Rotate</span>
+              </div>
+            )}
+
             {/* Duplicate */}
             <div onTouchEnd={() => { onDuplicate(); close(); }} onClick={() => { onDuplicate(); close(); }} style={itemStyle}>
               <span style={{ fontSize: 20 }}>⧉</span>
@@ -471,6 +543,36 @@ function MobileSheet({ graphicId, graphic, currentEffect, onEffectClick, current
             </div>
           </div>
         )}
+
+        {/* Flip view */}
+        {view === 'flip' && (
+          <div style={{ overflowY: 'auto', flex: 1, padding: '8px 0 20px' }}>
+            {[
+              { icon: '↔', label: 'Horizontal Flip', desc: 'Mirror left ↔ right', action: onFlipH },
+              { icon: '↕', label: 'Vertical Flip',   desc: 'Mirror top ↕ bottom', action: onFlipV },
+            ].map(item => (
+              <div key={item.label}
+                onClick={() => { item.action(); close(); }}
+                onTouchEnd={() => { item.action(); close(); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '15px 20px', cursor: 'pointer',
+                  fontFamily: 'system-ui', fontSize: 15,
+                  color: '#e2e8f0', borderBottom: '1px solid #1e293b',
+                  transition: 'background 0.1s', userSelect: 'none',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#1e293b'}
+                onMouseLeave={e => e.currentTarget.style.background = ''}
+              >
+                <span style={{ fontSize: 24, width: 32, textAlign: 'center' }}>{item.icon}</span>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{item.label}</div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{item.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   ), document.body);
@@ -501,6 +603,220 @@ function MenuItem({ icon, label, hint, onClick, danger }) {
   );
 }
 
+// ─── Crop Modal ───────────────────────────────────────────────────────────────
+function CropModal({ graphic, onSave, onClose }) {
+  const imgRef    = useRef(null);
+  const canvasRef = useRef(null);
+  const dragRef   = useRef(null);
+
+  const initCrop = graphic.cropRect ?? { x: 0, y: 0, w: 1, h: 1 };
+  const [crop, setCrop]         = useState(initCrop);
+  const [rotation, setRotation] = useState(graphic.cropRotation ?? 0);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    const cv  = canvasRef.current;
+    if (!img || !cv || !imgLoaded) return;
+    const W = cv.width, H = cv.height;
+    const ctx = cv.getContext('2d');
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.drawImage(img, -W / 2, -H / 2, W, H);
+    ctx.restore();
+
+    const cx = crop.x * W, cy = crop.y * H, cw = crop.w * W, ch = crop.h * H;
+
+    // Dim area outside crop
+    ctx.fillStyle = 'rgba(0,0,0,0.52)';
+    ctx.fillRect(0, 0, W, cy);
+    ctx.fillRect(0, cy + ch, W, H - cy - ch);
+    ctx.fillRect(0, cy, cx, ch);
+    ctx.fillRect(cx + cw, cy, W - cx - cw, ch);
+
+    // Crop border
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx, cy, cw, ch);
+
+    // Corner handles
+    const HS = 10;
+    ctx.fillStyle = '#3b82f6';
+    [[cx, cy], [cx + cw - HS, cy], [cx, cy + ch - HS], [cx + cw - HS, cy + ch - HS]]
+      .forEach(([hx, hy]) => ctx.fillRect(hx, hy, HS, HS));
+
+    // Rule-of-thirds
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 3; i++) {
+      ctx.beginPath(); ctx.moveTo(cx + (cw / 3) * i, cy); ctx.lineTo(cx + (cw / 3) * i, cy + ch); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy + (ch / 3) * i); ctx.lineTo(cx + cw, cy + (ch / 3) * i); ctx.stroke();
+    }
+  }, [crop, rotation, imgLoaded]);
+
+  const onCanvasMouseDown = (e) => {
+    const cv = canvasRef.current;
+    const rect = cv.getBoundingClientRect();
+    const W = cv.width, H = cv.height;
+    const mx = (e.clientX - rect.left) * (W / rect.width);
+    const my = (e.clientY - rect.top)  * (H / rect.height);
+    const cx = crop.x * W, cy = crop.y * H, cw = crop.w * W, ch = crop.h * H;
+    const HS = 16;
+
+    let mode = null;
+    if (Math.abs(mx - cx) < HS && Math.abs(my - cy) < HS)                   mode = 'nw';
+    else if (Math.abs(mx - (cx+cw)) < HS && Math.abs(my - cy) < HS)          mode = 'ne';
+    else if (Math.abs(mx - cx) < HS && Math.abs(my - (cy+ch)) < HS)          mode = 'sw';
+    else if (Math.abs(mx - (cx+cw)) < HS && Math.abs(my - (cy+ch)) < HS)     mode = 'se';
+    else if (mx > cx && mx < cx+cw && my > cy && my < cy+ch)                  mode = 'move';
+    if (!mode) return;
+
+    dragRef.current = { mode, startMx: mx, startMy: my, startCrop: { ...crop } };
+
+    const onMove = (me) => {
+      const r = cv.getBoundingClientRect();
+      const nx = (me.clientX - r.left) * (W / r.width);
+      const ny = (me.clientY - r.top)  * (H / r.height);
+      const dx = (nx - dragRef.current.startMx) / W;
+      const dy = (ny - dragRef.current.startMy) / H;
+      const sc = dragRef.current.startCrop;
+      const cl = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+      const MIN = 0.05;
+      setCrop(() => {
+        let { x, y, w, h } = sc;
+        if (mode === 'move') { x = cl(x+dx, 0, 1-w); y = cl(y+dy, 0, 1-h); }
+        if (mode === 'nw')   { const nx2 = cl(x+dx, 0, x+w-MIN); y = cl(y+dy, 0, y+h-MIN); w += x-nx2; h += sc.y-y; x = nx2; }
+        if (mode === 'ne')   { w = cl(w+dx, MIN, 1-x); y = cl(y+dy, 0, y+h-MIN); h += sc.y-y; }
+        if (mode === 'sw')   { const nx2 = cl(x+dx, 0, x+w-MIN); w += x-nx2; x = nx2; h = cl(h+dy, MIN, 1-y); }
+        if (mode === 'se')   { w = cl(w+dx, MIN, 1-x); h = cl(h+dy, MIN, 1-y); }
+        return { x, y, w, h };
+      });
+    };
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  return createPortal((
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 10000,
+      background: 'rgba(0,0,0,0.72)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: 'system-ui,sans-serif',
+      animation: 'wb-fadeIn 0.18s ease both',
+    }}>
+      <img ref={imgRef} src={graphic.src} crossOrigin="anonymous"
+        style={{ display: 'none' }} onLoad={() => setImgLoaded(true)} />
+
+      <div style={{
+        background: '#0f172a', border: '1px solid #334155',
+        borderRadius: 16, boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
+        width: 560, maxWidth: '96vw', display: 'flex', flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 20px', borderBottom: '1px solid #1e293b',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>✂️</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>Crop & Rotate</span>
+          </div>
+          <button onClick={onClose} style={{
+            background: '#1e293b', border: 'none', color: '#94a3b8',
+            width: 30, height: 30, borderRadius: '50%', fontSize: 16,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>✕</button>
+        </div>
+
+        {/* Canvas */}
+        <div style={{ padding: '16px 20px 8px', display: 'flex', justifyContent: 'center' }}>
+          <canvas ref={canvasRef} width={500} height={300}
+            onMouseDown={onCanvasMouseDown}
+            style={{
+              width: '100%', maxWidth: 500, height: 300,
+              borderRadius: 8, cursor: 'crosshair',
+              background: '#1e293b', border: '1px solid #334155',
+            }}
+          />
+        </div>
+
+        {/* Rotation */}
+        <div style={{ padding: '8px 20px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ color: '#94a3b8', fontSize: 13, fontWeight: 600 }}>🔄 Rotate</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {[-90, -45, 45, 90].map(deg => (
+                <button key={deg} onClick={() => setRotation(r => Math.max(-180, Math.min(180, r + deg)))}
+                  style={{
+                    padding: '3px 9px', background: '#1e293b',
+                    border: '1px solid #334155', borderRadius: 5,
+                    color: '#94a3b8', fontSize: 12, cursor: 'pointer',
+                  }}>
+                  {deg > 0 ? '+' : ''}{deg}°
+                </button>
+              ))}
+              <span style={{ color: '#60a5fa', fontSize: 13, fontWeight: 700, minWidth: 42, textAlign: 'right' }}>
+                {rotation}°
+              </span>
+            </div>
+          </div>
+          <input type="range" min={-180} max={180} value={rotation}
+            onChange={e => setRotation(Number(e.target.value))}
+            style={{ width: '100%', accentColor: '#3b82f6' }} />
+        </div>
+
+        {/* Crop info chips */}
+        <div style={{ padding: '0 20px 14px', display: 'flex', gap: 8 }}>
+          {[
+            { label: 'X', val: Math.round(crop.x * 100) + '%' },
+            { label: 'Y', val: Math.round(crop.y * 100) + '%' },
+            { label: 'W', val: Math.round(crop.w * 100) + '%' },
+            { label: 'H', val: Math.round(crop.h * 100) + '%' },
+          ].map(({ label, val }) => (
+            <div key={label} style={{
+              flex: 1, background: '#1e293b', borderRadius: 6, padding: '6px 10px',
+              border: '1px solid #334155', textAlign: 'center',
+            }}>
+              <div style={{ color: '#64748b', fontSize: 10, fontWeight: 700, textTransform: 'uppercase' }}>{label}</div>
+              <div style={{ color: '#e2e8f0', fontSize: 13, fontWeight: 700, marginTop: 2 }}>{val}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '12px 20px', borderTop: '1px solid #1e293b', gap: 10,
+        }}>
+          <button onClick={() => { setCrop({ x: 0, y: 0, w: 1, h: 1 }); setRotation(0); }}
+            style={{
+              padding: '8px 16px', background: 'none',
+              border: '1px solid #334155', borderRadius: 7,
+              color: '#94a3b8', fontSize: 13, cursor: 'pointer',
+            }}>Reset</button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onClose} style={{
+              padding: '8px 18px', background: '#1e293b',
+              border: '1px solid #334155', borderRadius: 7,
+              color: '#94a3b8', fontSize: 13, cursor: 'pointer',
+            }}>Cancel</button>
+            <button onClick={() => onSave(crop, rotation)} style={{
+              padding: '8px 22px', background: '#3b82f6',
+              border: 'none', borderRadius: 7,
+              color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}>Apply</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ), document.body);
+}
+
 // ─── Main export ─────────────────────────────────────────────────────────────
 export default function ContextMenu({ x, y, graphicId, onClose }) {
   const isMobile           = useMobile();
@@ -508,12 +824,14 @@ export default function ContextMenu({ x, y, graphicId, onClose }) {
   const updateGraphicProps = useStore(s => s.updateGraphicProps);
   const getSelectedScene   = useStore(s => s.getSelectedScene);
 
+  const [cropOpen, setCropOpen] = useState(false);
+
   ensureKeyframes();
 
-  const scene         = getSelectedScene();
-  const graphic       = scene?.graphics.find(g => g.id === graphicId);
-  const currentEffect = graphic?.entryEffect ?? 'none';
-  const currentReveal = graphic?.revealEffect ?? 'wipe-right';
+  const scene          = getSelectedScene();
+  const graphic        = scene?.graphics.find(g => g.id === graphicId);
+  const currentEffect  = graphic?.entryEffect ?? 'none';
+  const currentReveal  = graphic?.revealEffect ?? 'wipe-right';
   const isImageGraphic = graphic?.type === 'image';
 
   const handleEffectClick = (effectId) => {
@@ -526,45 +844,44 @@ export default function ContextMenu({ x, y, graphicId, onClose }) {
     onClose();
   };
 
-  const handleDelete = () => {
-    deleteGraphic(graphicId);
+  const handleDelete = () => { deleteGraphic(graphicId); onClose(); };
+  const handleDuplicate = () => { useStore.getState().duplicateGraphic(graphicId); };
+
+  const handleFlipH = () => {
+    updateGraphicProps(graphicId, { flipX: !(graphic?.flipX ?? false) });
     onClose();
   };
 
-  const handleDuplicate = () => {
-    useStore.getState().duplicateGraphic(graphicId);
+  const handleFlipV = () => {
+    updateGraphicProps(graphicId, { flipY: !(graphic?.flipY ?? false) });
+    onClose();
   };
 
-  if (isMobile) {
-    return (
-      <MobileSheet
-        graphicId={graphicId}
-        graphic={graphic}
-        currentEffect={currentEffect}
-        onEffectClick={handleEffectClick}
-        currentReveal={currentReveal}
-        isImageGraphic={isImageGraphic}
-        onRevealClick={handleRevealClick}
-        onDelete={handleDelete}
-        onDuplicate={handleDuplicate}
-        onClose={onClose}
-      />
-    );
-  }
+  const handleCropSave = (cropRect, cropRotation) => {
+    updateGraphicProps(graphicId, { cropRect, cropRotation });
+    setCropOpen(false);
+    onClose();
+  };
+
+  const sharedProps = {
+    graphicId, graphic,
+    currentEffect, onEffectClick: handleEffectClick,
+    currentReveal, isImageGraphic, onRevealClick: handleRevealClick,
+    onDelete: handleDelete, onDuplicate: handleDuplicate,
+    onFlipH: handleFlipH, onFlipV: handleFlipV,
+    onCrop: () => { setCropOpen(true); },
+    onClose,
+  };
 
   return (
-    <DesktopMenu
-      x={x} y={y}
-      graphicId={graphicId}
-      graphic={graphic}
-      currentEffect={currentEffect}
-      onEffectClick={handleEffectClick}
-      currentReveal={currentReveal}
-      isImageGraphic={isImageGraphic}
-      onRevealClick={handleRevealClick}
-      onDelete={handleDelete}
-      onDuplicate={handleDuplicate}
-      onClose={onClose}
-    />
+    <>
+      {isMobile
+        ? <MobileSheet {...sharedProps} />
+        : <DesktopMenu x={x} y={y} {...sharedProps} />
+      }
+      {cropOpen && isImageGraphic && (
+        <CropModal graphic={graphic} onSave={handleCropSave} onClose={() => { setCropOpen(false); onClose(); }} />
+      )}
+    </>
   );
 }

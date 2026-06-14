@@ -199,6 +199,9 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
 
   const activeDelay = seqDelay ?? graphic.delay;
   const rotation    = graphic.rotation ?? 0;
+  const flipX       = graphic.flipX ?? false;
+  const flipY       = graphic.flipY ?? false;
+  const flipScale   = `${flipX ? -1 : 1}, ${flipY ? -1 : 1}`;
   const entryEffect = graphic.entryEffect ?? 'none';
 
   // Entry effect style — applied during playback AND as a real-time preview
@@ -224,7 +227,7 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
           position: 'absolute',
           left: graphic.x, top: graphic.y,
           width: graphic.width, height: graphic.height,
-          transform: `rotate(${rotation}deg)`,
+          transform: `rotate(${rotation}deg) scale(${flipScale})`,
           transformOrigin: 'center center',
           cursor: playing ? 'default' : 'move',
           outline: !playing && isSelected ? '2px solid #3b82f6' : 'none',
@@ -261,8 +264,38 @@ export default function GraphicItem({ graphic, isSelected, playing, onTipMove, s
               onTipMove={onTipMove}
             />
           ) : (
-            <img src={graphic.src} alt={graphic.name} draggable={false}
-              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', userSelect: 'none' }} />
+            (() => {
+              const cr = graphic.cropRect;
+              const cr_rot = graphic.cropRotation ?? 0;
+              if (!cr || (cr.x === 0 && cr.y === 0 && cr.w === 1 && cr.h === 1 && cr_rot === 0)) {
+                return (
+                  <img src={graphic.src} alt={graphic.name} draggable={false}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', userSelect: 'none' }} />
+                );
+              }
+              // Render cropped region via a clipping div + oversized img
+              const scaleX = 1 / cr.w;
+              const scaleY = 1 / cr.h;
+              return (
+                <div style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
+                  <img src={graphic.src} alt={graphic.name} draggable={false}
+                    style={{
+                      position: 'absolute',
+                      width:  `${scaleX * 100}%`,
+                      height: `${scaleY * 100}%`,
+                      left:  `${-cr.x * scaleX * 100}%`,
+                      top:   `${-cr.y * scaleY * 100}%`,
+                      transform: `rotate(${cr_rot}deg)`,
+                      transformOrigin: `${(cr.x + cr.w / 2) * scaleX * 100}% ${(cr.y + cr.h / 2) * scaleY * 100}%`,
+                      objectFit: 'contain',
+                      display: 'block',
+                      userSelect: 'none',
+                      maxWidth: 'none',
+                    }}
+                  />
+                </div>
+              );
+            })()
           )
         ) : playing ? (
           <AnimatedTextReveal

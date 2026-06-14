@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useStore } from '../../store';
 import { HAND_OPTIONS, resolveHandOption } from '../../assets';
+import { getCanvasSize } from '../../utils/animation';
 import { Field, styles } from './SettingsModals';
 
 // ─── Hand Panel ─────────────────────────────────────────────────────────────────
@@ -168,6 +169,7 @@ export function HandPanelModal() {
           handId={handId}
           customHands={customHands}
           initialConfig={pendingHandConfig}
+          canvasSizeKey={project?.canvasSizeKey}
           onSave={handleCustomizerSave}
           onBack={() => setShowHandCustomizer(false)}
         />
@@ -177,7 +179,7 @@ export function HandPanelModal() {
 }
 
 // ─── Hand Customizer Modal ─────────────────────────────────────────────────────
-function HandCustomizerModal({ handId, customHands, initialConfig, onSave, onBack }) {
+function HandCustomizerModal({ handId, customHands, initialConfig, canvasSizeKey, onSave, onBack }) {
   const [scale,    setScale]    = useState(initialConfig.scale    ?? 1);
   const [rotation, setRotation] = useState(initialConfig.rotation ?? 0);
   const [flipX,    setFlipX]    = useState(initialConfig.flipX    ?? false);
@@ -200,11 +202,22 @@ function HandCustomizerModal({ handId, customHands, initialConfig, onSave, onBac
   const tipFX = handOpt.tipX / handOpt.nativeW;
   const tipFY = handOpt.tipY / handOpt.nativeH;
 
-  // Canvas dimensions (will be measured from ref, but we use these as layout hints)
-  const CANVAS_W = 540;
-  const CANVAS_H = 300;
+  // ── Real project canvas size ────────────────────────────────────────────────
+  // Derive actual project canvas dimensions from the canvasSizeKey so the
+  // preview box matches the real aspect ratio and the blue dot lands at true center.
+  const projectCanvas = getCanvasSize(canvasSizeKey);
+  const NATIVE_W = projectCanvas.w;
+  const NATIVE_H = projectCanvas.h;
 
-  // Anchor = canvas center (where blue dot sits)
+  // Max preview area we have inside the modal (matches the modal inner width ~552px
+  // minus 48px padding = 552, capped to 552×310 so tall canvases don't overflow).
+  const MAX_PREVIEW_W = 552;
+  const MAX_PREVIEW_H = 340;
+  const scaleToFit = Math.min(MAX_PREVIEW_W / NATIVE_W, MAX_PREVIEW_H / NATIVE_H);
+  const CANVAS_W = Math.round(NATIVE_W * scaleToFit);
+  const CANVAS_H = Math.round(NATIVE_H * scaleToFit);
+
+  // Anchor = canvas center (where blue dot sits) — true center of the real canvas
   const anchorX = CANVAS_W / 2;
   const anchorY = CANVAS_H / 2;
 
@@ -351,6 +364,18 @@ function HandCustomizerModal({ handId, customHands, initialConfig, onSave, onBac
             background: 'rgba(59,130,246,0.18)',
             pointerEvents: 'none',
           }} />
+
+          {/* Canvas size label — top left */}
+          <div style={{
+            position: 'absolute', top: 8, left: 10,
+            fontSize: 10, fontWeight: 700, color: '#3b82f6',
+            background: 'rgba(15,23,42,0.72)',
+            padding: '2px 8px', borderRadius: 4,
+            pointerEvents: 'none',
+            letterSpacing: 0.5,
+          }}>
+            {projectCanvas.label} · {NATIVE_W} × {NATIVE_H}
+          </div>
 
           {/* Blue anchor dot */}
           <div style={{
