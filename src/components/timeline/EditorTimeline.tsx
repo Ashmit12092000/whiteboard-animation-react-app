@@ -818,7 +818,7 @@ export default function EditorTimeline() {
         </div>
 
         {/* ── Camera keyframe action bar ──────────────────────────────────── */}
-        {!isMobile && scene && (() => {
+        {scene && (() => {
           const selectedKf = cameraKeyframes.find(k => k.id === selectedKfId);
           return (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px', borderBottom: '1px solid #1e293b', flexShrink: 0, background: '#080d16', minHeight: 32 }}>
@@ -897,15 +897,17 @@ export default function EditorTimeline() {
           );
         })()}
 
-        {/* ── Track panel (desktop) ─────────────────────────────────────────── */}
-        {!isMobile && scene && (
+        {/* ── Track panel ─────────────────────────────────────────────────── */}
+        {scene && (() => {
+          const labelW = isMobile ? 72 : LABEL_W;
+          return (
           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
             {/* Track header row: label col + playback controls + ruler */}
             <div style={{ display: 'flex', flexShrink: 0, borderBottom: '1px solid #1e293b', alignItems: 'stretch' }}>
 
               {/* Left label header — with play controls */}
-              <div style={{ width: LABEL_W, flexShrink: 0, height: HEADER_H + 10, borderRight: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 8, paddingRight: 6, background: '#080d16' }}>
+              <div style={{ width: labelW, flexShrink: 0, height: HEADER_H + 10, borderRight: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: isMobile ? 2 : 4, paddingLeft: isMobile ? 4 : 8, paddingRight: isMobile ? 2 : 6, background: '#080d16' }}>
 
                 {/* Play / Pause */}
                 <button
@@ -941,10 +943,12 @@ export default function EditorTimeline() {
                   ⏹
                 </button>
 
-                {/* Timecode */}
-                <span style={{ fontSize: 9, fontFamily: 'ui-monospace, monospace', color: isPlaying ? '#fbbf24' : '#475569', letterSpacing: '0.03em', flexShrink: 0, marginLeft: 2 }}>
-                  {formattedTime}
-                </span>
+                {/* Timecode — hide on very narrow mobile label col */}
+                {!isMobile && (
+                  <span style={{ fontSize: 9, fontFamily: 'ui-monospace, monospace', color: isPlaying ? '#fbbf24' : '#475569', letterSpacing: '0.03em', flexShrink: 0, marginLeft: 2 }}>
+                    {formattedTime}
+                  </span>
+                )}
               </div>
 
               {/* Ruler */}
@@ -959,7 +963,7 @@ export default function EditorTimeline() {
             <div style={{ display: 'flex', flex: 1, minHeight: 0, overflowY: 'auto' }}>
 
               {/* Sticky label column */}
-              <div style={{ width: LABEL_W, flexShrink: 0, background: '#080d16', borderRight: '1px solid #1e293b' }}>
+              <div style={{ width: labelW, flexShrink: 0, background: '#080d16', borderRight: '1px solid #1e293b' }}>
                 {tracksWithTime.length === 0 && (
                   <div style={{ padding: '18px 0', textAlign: 'center', color: '#334155', fontSize: 11 }}>—</div>
                 )}
@@ -976,7 +980,7 @@ export default function EditorTimeline() {
                 {/* Camera row label */}
                 <div
                   onContextMenu={(e) => { e.preventDefault(); setCameraCtxMenu({ x: e.clientX, y: e.clientY }); }}
-                  style={{ width: LABEL_W, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', height: 34, boxSizing: 'border-box', cursor: 'context-menu' }}>
+                  style={{ width: labelW, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', height: 34, boxSizing: 'border-box', cursor: 'context-menu' }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, flex: 1 }}>📷 Cam</span>
                 </div>
@@ -987,7 +991,7 @@ export default function EditorTimeline() {
                   if (!audioTracks.some(match)) return null;
                   const rowTracks = audioTracks.filter(match);
                   return (
-                    <div key={type} style={{ width: LABEL_W, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', boxSizing: 'border-box' }}>
+                    <div key={type} style={{ width: labelW, borderTop: '1px solid #1e293b', borderRight: '1px solid #1e293b', background: '#080d16', boxSizing: 'border-box' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 8px', height: AUDIO_ROW_H * rowTracks.length }}>
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
                         <span style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 1, flex: 1 }}>{label}</span>
@@ -1092,7 +1096,8 @@ export default function EditorTimeline() {
             </div>
 
           </div>
-        )}
+          );
+        })()}
 
         {/* Context menu */}
         {ctxMenu && scene && (

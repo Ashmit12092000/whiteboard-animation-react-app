@@ -4,8 +4,43 @@ import { useRef } from 'react';
 // ── Generic "Load project from JSON" button ───────────────────────────────────
 // Renders a hidden file input + styled button. Pass a `style` override and an
 // `onLoad(file)` handler (typically the store's `loadProjectFromJson`).
-export default function LoadJsonButton({ onLoad, label = 'Load', style, fullWidth = false }) {
+// Pass `compact` for an icon-only mobile-friendly version.
+export default function LoadJsonButton({ onLoad, label = 'Load', style, fullWidth = false, compact = false }) {
   const inputRef = useRef(null);
+
+  if (compact) {
+    return (
+      <>
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+          onChange={e => {
+            const file = e.target.files?.[0];
+            if (file) onLoad(file);
+            e.target.value = '';
+          }}
+        />
+        <button
+          onClick={() => inputRef.current?.click()}
+          title="Load project from JSON file"
+          style={{
+            width: 34, height: 34,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'none', border: 'none',
+            color: '#94a3b8', fontSize: 16, cursor: 'pointer',
+            borderRadius: 7, flexShrink: 0,
+            touchAction: 'manipulation',
+            ...style,
+          }}
+        >
+          📂
+        </button>
+      </>
+    );
+  }
+
   return (
     <>
       <input
