@@ -13,6 +13,18 @@ import { pushHistory } from './history';
 // agrees on the same floor.
 export const MIN_GRAPHIC_DURATION = 0.1;
 
+// Smallest allowed width (as a fraction of the source clip's full duration)
+// for either side of an audio split, or for trimStart/trimEnd handles.
+export const MIN_AUDIO_TRIM_FRAC = 0.02;
+
+// Appends/increments a " (N)" suffix on a track name when splitting, so the
+// two resulting clips are distinguishable in the timeline & audio library.
+function appendSplitSuffix(name, part = 2) {
+  const base = (name || 'Audio').replace(/\s*\(\d+\)\s*$/, '');
+  return `${base} (${part})`;
+}
+
+
 // ─── Persistence helpers ──────────────────────────────────────────────────────
 const STORAGE_KEY = 'opendoodler_projects';
 
@@ -639,6 +651,50 @@ export const useStore = create((set, get) => ({
         if (audioBuffer !== undefined) track._audioBuffer = audioBuffer;
       }
     }));
+  },
+
+  // Splits an audio clip's TRIMMED region into two consecutive clips at its
+  // midpoint. Both halves reference the same underlying source (src / name /
+  // filter / volume / etc.) but each gets its own trimStart/trimEnd window,
+  // so together they cover exactly the range the original clip covered.
+  // Mirrors splitGraphic's "split timing in half" behaviour.
+  splitAudioTrack(trackId) {
+    set(state => {
+      const hist = pushHistory(state);
+      return produce({ ...state, ...hist }, draft => {
+        if (!draft.project.audioTracks) return;
+        const idx = draft.project.audioTracks.findIndex(t => t.id === trackId);
+        if (idx < 0) return;
+
+        const track     = draft.project.audioTracks[idx];
+        const trimStart = track.trimStart ?? 0;
+        const trimEnd   = track.trimEnd   ?? 1;
+        const mid       = (trimStart + trimEnd) / 2;
+
+        // Need at least a sliver on each side after the split
+        if (mid - trimStart < MIN_AUDIO_TRIM_FRAC || trimEnd - mid < MIN_AUDIO_TRIM_FRAC) return;
+
+        const { _audioBuffer, ...rest } = track;
+        const second = {
+          ...rest,
+          id: crypto.randomUUID(),
+          name: appendSplitSuffix(track.name),
+          trimStart: mid,
+          trimEnd: trimEnd,
+        };
+
+        track.trimEnd = mid;
+        track.name = appendSplitSuffix(track.name, 1);
+
+        if (_audioBuffer !== undefined) {
+          second._audioBuffer = _audioBuffer;
+          track._audioBuffer = _audioBuffer;
+        }
+
+        draft.project.audioTracks.splice(idx + 1, 0, second);
+        return;
+      });
+    });
   },
 
   // ── Playhead ──────────────────────────────────────────────────────────────────

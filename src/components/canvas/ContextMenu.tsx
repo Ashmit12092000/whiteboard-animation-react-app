@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '../../store';
 import { useMobile } from '../../hooks/useMobile';
 
@@ -116,7 +117,7 @@ function DesktopMenu({ x, y, graphicId, graphic, currentEffect, onEffectClick, c
     gap: 9, borderRadius: 6, margin: '2px 4px', transition: 'background 0.1s', position: 'relative',
   };
 
-  return (
+  return createPortal((
     <div ref={menuRef} onContextMenu={e => e.preventDefault()}
       style={{
         position: 'fixed', top: adjY, left: adjX, zIndex: 9999,
@@ -263,7 +264,7 @@ function DesktopMenu({ x, y, graphicId, graphic, currentEffect, onEffectClick, c
       {/* Delete */}
       <MenuItem icon="🗑" label="Delete" hint="Del" onClick={onDelete} danger />
     </div>
-  );
+  ), document.body);
 }
 
 // ─── Mobile bottom sheet ─────────────────────────────────────────────────────
@@ -296,7 +297,7 @@ function MobileSheet({ graphicId, graphic, currentEffect, onEffectClick, current
     transition: 'background 0.1s', userSelect: 'none',
   };
 
-  return (
+  return createPortal((
     <div
       onClick={handleBackdrop}
       style={{
@@ -472,7 +473,7 @@ function MobileSheet({ graphicId, graphic, currentEffect, onEffectClick, current
         )}
       </div>
     </div>
-  );
+  ), document.body);
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

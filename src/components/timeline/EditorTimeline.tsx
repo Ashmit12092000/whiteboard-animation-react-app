@@ -11,6 +11,8 @@ import CameraEasingPreview from '../../camera/CameraEasingPreview';
 import VoiceRecorderModal from '../dialogs/VoiceRecorderModal';
 import TTSModal from '../dialogs/TTSModal';
 import TrimModal from '../dialogs/TrimModal';
+import AudioTrimModal from '../dialogs/AudioTrimModal';
+import { MIN_AUDIO_TRIM_FRAC } from '../../store';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LABEL_W   = 130;
@@ -177,9 +179,10 @@ function TrackContextMenu({ x, y, graphic, scene, onClose, onTrim }) {
 }
 
 // ─── Audio track context menu ─────────────────────────────────────────────────
-function AudioTrackContextMenu({ x, y, track, onClose }) {
+function AudioTrackContextMenu({ x, y, track, onClose, onTrim }) {
   const removeAudioTrack  = useStore(s => s.removeAudioTrack);
   const updateAudioTrack  = useStore(s => s.updateAudioTrack);
+  const splitAudioTrack   = useStore(s => s.splitAudioTrack);
   const commitHistory     = useStore(s => s.commitHistory);
   const isTTS = track.type === 'tts';
   const isMusic = track.type === 'music';
@@ -190,11 +193,18 @@ function AudioTrackContextMenu({ x, y, track, onClose }) {
   const fadeIn  = track.fadeIn  ?? 0;
   const fadeOut = track.fadeOut ?? 0;
 
+  const trimStart = track.trimStart ?? 0;
+  const trimEnd   = track.trimEnd   ?? 1;
+  const canSplit  = (trimEnd - trimStart) / 2 >= MIN_AUDIO_TRIM_FRAC;
+
   // Discrete, single-shot edit from a menu item: record undo state first.
   const update = (changes) => { commitHistory(); updateAudioTrack(track.id, changes); };
 
   const items = [
     { header },
+    { sep: true },
+    { label: 'Split at Midpoint', icon: '✂', disabled: !canSplit, action: () => { if (!canSplit) return; splitAudioTrack(track.id); onClose(); } },
+    { label: 'Trim…',              icon: '⬌', action: () => { onTrim?.(track); onClose(); } },
     { sep: true },
     // Volume steps
     { label: 'Volume 100%', icon: '🔊', action: () => { update({ volume: 1.0 }); onClose(); } },
@@ -295,7 +305,96 @@ function TrackBar({ graphic, startX, width, delayW, pxPerS, isSelected, onSelect
   );
 }
 
-// ─── Track label ──────────────────────────────────────────────────────────────
+// ─── Audio track bar (with trim handles) ──────────────────────────────────────
+function AudioTrackBar({ track, totalW, color, label, onContextMenu, onSelect }) {
+  const updateAudioTrack = useStore(s => s.updateAudioTrack);
+  const commitHistory    = useStore(s => s.commitHistory);
+  const [hovered, setHovered] = useState(false);
+
+  const trimStart = track.trimStart ?? 0;
+  const trimEnd   = track.trimEnd   ?? 1;
+  const activeLeft  = trimStart * totalW;
+  const activeRight = trimEnd   * totalW;
+  const activeW     = Math.max(4, activeRight - activeLeft);
+
+  const onHandleDown = useCallback((side) => (e) => {
+    e.stopPropagation(); e.preventDefault();
+    commitHistory();
+    const startX0 = e.clientX;
+    const startTrimStart = track.trimStart ?? 0;
+    const startTrimEnd   = track.trimEnd   ?? 1;
+
+    const onMove = (ev) => {
+      const dFrac = (ev.clientX - startX0) / totalW;
+      if (side === 'left') {
+        const next = Math.max(0, Math.min(startTrimStart + dFrac, startTrimEnd - MIN_AUDIO_TRIM_FRAC));
+        updateAudioTrack(track.id, { trimStart: parseFloat(next.toFixed(4)) });
+      } else {
+        const next = Math.min(1, Math.max(startTrimEnd + dFrac, startTrimStart + MIN_AUDIO_TRIM_FRAC));
+        updateAudioTrack(track.id, { trimEnd: parseFloat(next.toFixed(4)) });
+      }
+    };
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [track.id, track.trimStart, track.trimEnd, totalW, updateAudioTrack, commitHistory]);
+
+  return (
+    <div
+      style={{ position: 'absolute', left: 0, top: 4, width: Math.max(6, totalW), height: 26 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Trimmed-off start region */}
+      {activeLeft > 0.5 && (
+        <div style={{
+          position: 'absolute', left: 0, top: 0, width: activeLeft, height: '100%',
+          background: 'repeating-linear-gradient(-45deg, rgba(0,0,0,0.45), rgba(0,0,0,0.45) 3px, rgba(255,255,255,0.04) 3px, rgba(255,255,255,0.04) 6px)',
+          borderRadius: '4px 0 0 4px',
+        }} />
+      )}
+
+      {/* Active region */}
+      <div
+        onClick={(e) => { e.stopPropagation(); onSelect?.(); }}
+        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(e); }}
+        title={track.name}
+        style={{
+          position: 'absolute', left: activeLeft, width: activeW, top: 0, height: '100%',
+          borderRadius: 4, boxSizing: 'border-box', overflow: 'hidden',
+          background: hovered ? `${color}` : color,
+          filter: hovered ? 'brightness(1.15)' : undefined,
+          border: '1.5px solid rgba(255,255,255,0.18)',
+          display: 'flex', alignItems: 'center', cursor: 'context-menu', userSelect: 'none',
+          transition: 'filter 0.1s',
+        }}
+      >
+        <span style={{ position: 'absolute', left: 8, right: 8, fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.92)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', pointerEvents: 'none' }}>
+          {label} {track.name}
+        </span>
+        {/* Left (trim start) handle */}
+        <div onMouseDown={onHandleDown('left')} style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, cursor: 'ew-resize', background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+          <div style={{ width: 1, height: 10, background: 'rgba(255,255,255,0.6)', borderRadius: 1 }} />
+        </div>
+        {/* Right (trim end) handle */}
+        <div onMouseDown={onHandleDown('right')} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 6, cursor: 'ew-resize', background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+          <div style={{ width: 1, height: 10, background: 'rgba(255,255,255,0.6)', borderRadius: 1 }} />
+        </div>
+      </div>
+
+      {/* Trimmed-off end region */}
+      {activeRight < totalW - 0.5 && (
+        <div style={{
+          position: 'absolute', left: activeRight, top: 0, width: totalW - activeRight, height: '100%',
+          background: 'repeating-linear-gradient(-45deg, rgba(0,0,0,0.45), rgba(0,0,0,0.45) 3px, rgba(255,255,255,0.04) 3px, rgba(255,255,255,0.04) 6px)',
+          borderRadius: '0 4px 4px 0',
+        }} />
+      )}
+    </div>
+  );
+}
+
+
 function TrackLabel({ graphic, isSelected, onSelect, onContextMenu }) {
   const colors = TYPE_COLOR[graphic.type] ?? TYPE_COLOR.drawing;
   const [hov, setHov] = useState(false);
@@ -404,6 +503,7 @@ export default function EditorTimeline() {
 
   // ── Trim modal ────────────────────────────────────────────────────────────
   const [trimGraphic, setTrimGraphic] = useState(null);
+  const [audioTrimTrack, setAudioTrimTrack] = useState(null);
 
   const scene           = project?.scenes.find(s => s.id === selectedSceneId);
   const cameraKeyframes = getCameraKeyframes(selectedSceneId);
@@ -817,25 +917,18 @@ export default function EditorTimeline() {
                     return (
                       <div key={type} style={{ height: AUDIO_ROW_H, background: '#080d16', borderTop: '1px solid #1e293b', position: 'relative', overflow: 'hidden' }}>
                         {rowTracks.map((track) => {
-                          const dur   = track.duration ?? 1;
-                          const width = dur * pxPerS;
+                          const dur    = track.duration ?? 1;
+                          const totalW = dur * pxPerS;
+                          const icon   = type === 'tts' ? '🔊' : type === 'music' ? '🎵' : '🎙';
                           return (
-                            <div
+                            <AudioTrackBar
                               key={track.id}
-                              onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setAudioCtxMenu({ x: e.clientX, y: e.clientY, track }); }}
-                              title={track.name}
-                              style={{
-                                position: 'absolute', left: 0, top: 4, width: Math.max(6, width), height: 26,
-                                borderRadius: 4, boxSizing: 'border-box', overflow: 'hidden',
-                                background: color,
-                                border: '1.5px solid rgba(255,255,255,0.18)',
-                                display: 'flex', alignItems: 'center', cursor: 'context-menu', userSelect: 'none',
-                              }}
-                            >
-                              <span style={{ position: 'absolute', left: 6, right: 6, fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.92)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', pointerEvents: 'none' }}>
-                                {type === 'tts' ? '🔊' : type === 'music' ? '🎵' : '🎙'} {track.name}
-                              </span>
-                            </div>
+                              track={track}
+                              totalW={totalW}
+                              color={color}
+                              label={icon}
+                              onContextMenu={(e) => setAudioCtxMenu({ x: e.clientX, y: e.clientY, track })}
+                            />
                           );
                         })}
                       </div>
@@ -888,6 +981,7 @@ export default function EditorTimeline() {
             y={audioCtxMenu.y}
             track={audioCtxMenu.track}
             onClose={() => setAudioCtxMenu(null)}
+            onTrim={(t) => { setAudioTrimTrack(t); setAudioCtxMenu(null); }}
           />
         )}
       </div>
@@ -907,6 +1001,14 @@ export default function EditorTimeline() {
         <TrimModal
           graphic={trimGraphic}
           onClose={() => setTrimGraphic(null)}
+        />
+      )}
+
+      {/* Audio trim modal */}
+      {audioTrimTrack && (
+        <AudioTrimModal
+          track={audioTrimTrack}
+          onClose={() => setAudioTrimTrack(null)}
         />
       )}
     </>
